@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Unit } from '../../types'
 import { MultiSelectDropdown } from '../ui/MultiSelectDropdown'
+import { useCep } from '../../lib/useCep'
 
 export type CreateUserPayload = {
   nome: string
@@ -33,6 +34,14 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // INTEGRAÇÃO DO HOOK DE CEP
+  const { fetchCep, formatCep, loadingCep, cepError } = useCep((data) => {
+    // Aqui você define o que acontece quando o CEP é encontrado.
+    // Como o seu formulário de USUÁRIO não parece ter campos de endereço (apenas o de UNIDADES tem),
+    // você pode usar isso para logs ou validar se o investidor é de uma região específica.
+    console.log("CEP localizado:", data);
+  });
+  
   const unitOptions = useMemo(
     () => units.map((unit) => ({ id: unit.id, label: unit.nome, hint: [unit.cidade, unit.estado].filter(Boolean).join(' • ') })),
     [units]
