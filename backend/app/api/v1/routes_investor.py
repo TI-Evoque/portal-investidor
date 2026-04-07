@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import require_authorized_user
+from app.api.deps.auth import is_staff, require_authorized_user
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.unit import Unit
@@ -27,7 +27,7 @@ def _serialize_unit(unit: Unit) -> dict:
 
 @router.get('/units')
 def my_units(db: Session = Depends(get_db), current_user=Depends(require_authorized_user)):
-    if current_user.role == 'admin':
+    if is_staff(current_user):
         units = db.query(Unit).all()
     else:
         units = (

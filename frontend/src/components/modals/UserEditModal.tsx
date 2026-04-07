@@ -76,7 +76,6 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
         <div className="modal-header modal-header-sticky">
           <div>
             <h2>Editar investidor</h2>
-            
           </div>
           <button onClick={onClose} className="modal-close-btn">×</button>
         </div>
@@ -138,10 +137,17 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
                   <input type="checkbox" checked={formData.is_authorized || false} onChange={(e) => handleChange('is_authorized', e.target.checked)} disabled={loading} />
                   <div><strong>Acesso autorizado</strong><span>Libera unidades e arquivos do investidor.</span></div>
                 </label>
-                <label className="setting-toggle setting-toggle-rich">
-                  <input type="checkbox" checked={formData.role === 'admin'} onChange={(e) => handleChange('role', e.target.checked ? 'admin' : 'investor')} disabled={loading} />
-                  <div><strong>Administrador</strong><span>Concede permissões administrativas completas.</span></div>
-                </label>
+                {user.role === 'super_admin' ? (
+                  <label className="setting-toggle setting-toggle-rich">
+                    <input type="checkbox" checked disabled />
+                    <div><strong>Super admin</strong><span>Esse usuário possui o nível máximo de permissão.</span></div>
+                  </label>
+                ) : (
+                  <label className="setting-toggle setting-toggle-rich">
+                    <input type="checkbox" checked={formData.role === 'admin'} onChange={(e) => handleChange('role', e.target.checked ? 'admin' : 'investor')} disabled={loading} />
+                    <div><strong>Administrador</strong><span>Concede permissões administrativas completas.</span></div>
+                  </label>
+                )}
                 <label className="setting-toggle setting-toggle-rich">
                   <input type="checkbox" checked={formData.must_change_password || false} onChange={(e) => handleChange('must_change_password', e.target.checked)} disabled={loading || resetLoading} />
                   <div><strong>Trocar senha no próximo login</strong><span>Usado também no reset de senha abaixo.</span></div>
@@ -170,12 +176,12 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
             <div className="modal-section modal-tab-panel">
               <div className="modal-panel-intro">
                 <h3>Reset de senha</h3>
-                <p className="modal-subtitle">Gera uma nova senha temporária de 6 caracteres, envia por e-mail e obriga a troca da senha no próximo login.</p>
+                <p className="modal-subtitle">Gera uma nova senha temporária de 6 caracteres e obriga a troca da senha no próximo login.</p>
               </div>
               <div className="security-panel-card">
                 <div>
                   <strong>Resetar senha do usuário</strong>
-                  <p className="modal-subtitle">Ao confirmar, o usuário receberá a senha temporária e será levado primeiro para a tela de nova senha antes de entrar no portal.</p>
+                  <p className="modal-subtitle">Ao confirmar, o usuário receberá uma senha temporária e será levado primeiro para a tela de nova senha antes de entrar no portal.</p>
                 </div>
                 <button type="button" className="btn-secondary" onClick={handleResetPassword} disabled={resetLoading}>{resetLoading ? 'Resetando...' : 'Resetar senha'}</button>
               </div>

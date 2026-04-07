@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File as FastFile, Form, HTTPException, U
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import require_admin, require_authorized_user
+from app.api.deps.auth import is_staff, is_super_admin, require_admin, require_authorized_user
 from app.db.session import get_db
 from app.models.file import File, FileUnit
 from app.models.unit import Unit
@@ -87,7 +87,7 @@ def _apply_unit_payload(unit: Unit, payload: UnitCreate | UnitUpdate) -> None:
 @router.get('', response_model=list[UnitOut])
 def list_units(db: Session = Depends(get_db), current_user: User = Depends(require_authorized_user)):
     query = db.query(Unit).order_by(Unit.nome.asc())
-    if current_user.role != 'admin':
+    if not is_staff(current_user):
         query = query.join(UserUnit, UserUnit.unit_id == Unit.id).filter(UserUnit.user_id == current_user.id)
     return [_serialize_unit(unit) for unit in query.all()]
 
@@ -163,10 +163,12 @@ def delete_unit_photo(unit_id: int, db: Session = Depends(get_db), _: object = D
 
 
 @router.delete('/{unit_id}')
-def delete_unit(unit_id: int, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def delete_unit(unit_id: int, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
+    if not is_super_admin(current_admin):
+        raise HTTPException(status_code=403, detail='Apenas o super admin pode excluir unidades')
     db.delete(unit)
     db.commit()
     return {'message': 'Unidade removida com sucesso'}
@@ -195,7 +197,7 @@ def list_unit_files(unit_id: int, db: Session = Depends(get_db), current_user: U
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
 
-    if current_user.role != 'admin':
+    if not is_staff(current_user):
         has_access = db.query(UserUnit).filter(UserUnit.user_id == current_user.id, UserUnit.unit_id == unit_id).first()
         if not has_access:
             raise HTTPException(status_code=403, detail='Sem permissao para esta unidade')

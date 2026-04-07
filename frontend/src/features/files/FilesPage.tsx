@@ -163,7 +163,7 @@ function FileEditModal({
 
 export function FilesPage() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
   const [files, setFiles] = useState<PortalFile[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [currentPage, setCurrentPage] = useState(1)

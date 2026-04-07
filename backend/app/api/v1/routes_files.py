@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, File as FastFile, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from app.api.deps.auth import require_admin, require_authorized_user
+
+from app.api.deps.auth import is_staff, require_admin, require_authorized_user
 from app.db.session import get_db
 from app.models.file import File, FileUnit
 from app.models.unit import Unit
@@ -25,7 +26,7 @@ def _serialize_file(record: File) -> FileOut:
 @router.get('', response_model=list[FileOut])
 def list_files(db: Session = Depends(get_db), current_user=Depends(require_authorized_user)):
     query = db.query(File)
-    if current_user.role != 'admin':
+    if not is_staff(current_user):
         allowed_units = db.query(UserUnit.unit_id).filter(UserUnit.user_id == current_user.id)
         query = query.join(FileUnit).filter(FileUnit.unit_id.in_(allowed_units))
     records = query.order_by(File.created_at.desc()).distinct().all()
@@ -63,14 +64,14 @@ def upload_file(
 def download_file(file_id: int, db: Session = Depends(get_db), current_user=Depends(require_authorized_user)):
     record = db.query(File).filter(File.id == file_id).first()
     if not record:
-        raise HTTPException(status_code=404, detail='Arquivo não encontrado')
-    if current_user.role != 'admin':
+        raise HTTPException(status_code=404, detail='Arquivo nao encontrado')
+    if not is_staff(current_user):
         allowed_unit_ids = {rel.unit_id for rel in current_user.units}
         record_unit_ids = {rel.unit_id for rel in record.units}
         if not allowed_unit_ids.intersection(record_unit_ids):
-            raise HTTPException(status_code=403, detail='Sem permissão para este arquivo')
+            raise HTTPException(status_code=403, detail='Sem permissao para este arquivo')
     if not record.file_data:
-        raise HTTPException(status_code=404, detail='Arquivo não encontrado no banco')
+        raise HTTPException(status_code=404, detail='Arquivo nao encontrado no banco')
     return Response(
         record.file_data,
         media_type='application/pdf',
@@ -82,7 +83,7 @@ def download_file(file_id: int, db: Session = Depends(get_db), current_user=Depe
 def delete_file(file_id: int, db: Session = Depends(get_db), _: object = Depends(require_admin)):
     record = db.query(File).filter(File.id == file_id).first()
     if not record:
-        raise HTTPException(status_code=404, detail='Arquivo não encontrado')
+        raise HTTPException(status_code=404, detail='Arquivo nao encontrado')
     db.delete(record)
     db.commit()
     return {'message': 'Arquivo removido com sucesso'}
@@ -97,7 +98,7 @@ def update_file(
 ):
     record = db.query(File).filter(File.id == file_id).first()
     if not record:
-        raise HTTPException(status_code=404, detail='Arquivo não encontrado')
+        raise HTTPException(status_code=404, detail='Arquivo nao encontrado')
 
     clean_unit_ids = []
     for unit_id in payload.unit_ids:
@@ -109,7 +110,7 @@ def update_file(
 
     units = db.query(Unit).filter(Unit.id.in_(clean_unit_ids)).all()
     if len(units) != len(clean_unit_ids):
-        raise HTTPException(status_code=400, detail='Uma ou mais unidades são inválidas')
+        raise HTTPException(status_code=400, detail='Uma ou mais unidades sao invalidas')
 
     record.titulo = payload.titulo.strip()
     record.tipo_arquivo = payload.tipo_arquivo.strip()

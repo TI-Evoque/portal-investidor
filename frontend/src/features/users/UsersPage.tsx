@@ -9,6 +9,7 @@ import { UserEditModal } from '../../components/modals/UserEditModal'
 import { CreateUserPayload, UserCreateModal } from '../../components/modals/UserCreateModal'
 import { UserCreatedModal } from '../../components/modals/UserCreatedModal'
 import { ConfirmActionModal } from '../../components/modals/ConfirmActionModal'
+import { useAuth } from '../../contexts/AuthContext'
 
 const ITEMS_PER_PAGE = 10
 
@@ -28,6 +29,8 @@ type PendingUserAction = {
 }
 
 export function UsersPage() {
+  const { user: currentUser } = useAuth()
+  const isSuperAdmin = currentUser?.role === 'super_admin'
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -73,7 +76,7 @@ export function UsersPage() {
     () =>
       users.filter((user) => {
         if (summaryFilter === 'active' && !user.is_active) return false
-        if (summaryFilter === 'admin' && user.role !== 'admin') return false
+        if (summaryFilter === 'admin' && !['admin', 'super_admin'].includes(user.role)) return false
 
         const fullName = `${user.nome} ${user.sobrenome || ''}`.trim()
         const normalizedSearch = searchTerm.toLowerCase().trim()
@@ -151,7 +154,7 @@ export function UsersPage() {
   const summaryItems = [
     { key: 'all' as const, label: `${users.length} cadastrado(s)` },
     { key: 'active' as const, label: `${users.filter((user) => user.is_active).length} ativo(s)` },
-    { key: 'admin' as const, label: `${users.filter((user) => user.role === 'admin').length} admin(s)` },
+    { key: 'admin' as const, label: `${users.filter((user) => ['admin', 'super_admin'].includes(user.role)).length} admin(s)` },
   ]
 
   const openActionConfirmation = (action: PendingUserAction) => {
@@ -226,7 +229,9 @@ export function UsersPage() {
                 </div>
               </div>
               <div className="user-role-stack">
-                <div className="user-role">{user.role === 'admin' ? 'Administrador' : 'Investidor'}</div>
+                <div className="user-role">
+                  {user.role === 'super_admin' ? 'Super admin' : user.role === 'admin' ? 'Administrador' : 'Investidor'}
+                </div>
                 <div className={`pill-status ${user.is_authorized ? 'ok' : 'warn'}`}>{user.is_authorized ? 'Acesso liberado' : 'Acesso pendente'}</div>
               </div>
               <div className="user-role-stack">
@@ -234,20 +239,24 @@ export function UsersPage() {
                 <div className={`pill-status ${user.must_change_password ? 'warn' : 'ok'}`}>{user.must_change_password ? 'Troca de senha pendente' : 'Senha regular'}</div>
               </div>
               <div className="user-actions-grid">
-                <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
-                <button
-                  onClick={() =>
-                    openActionConfirmation({
-                      title: user.role === 'admin' ? 'Remover administrador' : 'Conceder administrador',
-                      message: user.role === 'admin'
-                        ? `Tem certeza que deseja remover o perfil de administrador de ${userName}?`
-                        : `Tem certeza que deseja conceder perfil de administrador para ${userName}?`,
-                      confirmLabel: user.role === 'admin' ? 'Remover admin' : 'Dar admin',
-                      run: async () => { await quickPatchUser(user, { role: user.role === 'admin' ? 'investor' : 'admin' }) },
-                    })
-                  }
-                  className="action-chip icon-action-chip"
-                ><Shield size={15} /> {user.role === 'admin' ? 'Remover admin' : 'Dar admin'}</button>
+                {isSuperAdmin ? (
+                  <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
+                ) : null}
+                {isSuperAdmin && user.role !== 'super_admin' ? (
+                  <button
+                    onClick={() =>
+                      openActionConfirmation({
+                        title: user.role === 'admin' ? 'Remover administrador' : 'Conceder administrador',
+                        message: user.role === 'admin'
+                          ? `Tem certeza que deseja remover o perfil de administrador de ${userName}?`
+                          : `Tem certeza que deseja conceder perfil de administrador para ${userName}?`,
+                        confirmLabel: user.role === 'admin' ? 'Remover admin' : 'Dar admin',
+                        run: async () => { await quickPatchUser(user, { role: user.role === 'admin' ? 'investor' : 'admin' }) },
+                      })
+                    }
+                    className="action-chip icon-action-chip"
+                  ><Shield size={15} /> {user.role === 'admin' ? 'Remover admin' : 'Dar admin'}</button>
+                ) : null}
                 <button
                   onClick={() =>
                     openActionConfirmation({
@@ -274,29 +283,33 @@ export function UsersPage() {
                   }
                   className="action-chip icon-action-chip"
                 >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
-                <button
-                  onClick={() =>
-                    openActionConfirmation({
-                      title: 'Resetar senha',
-                      message: `Tem certeza que deseja gerar uma nova senha temporaria para ${userName}? No proximo login, ele tera que cadastrar uma nova senha.`,
-                      confirmLabel: 'Resetar senha',
-                      run: async () => { await handleResetPassword(user, true) },
-                    })
-                  }
-                  className="action-chip icon-action-chip"
-                ><KeyRound size={15} /> Resetar senha</button>
-                <button
-                  onClick={() =>
-                    openActionConfirmation({
-                      title: 'Excluir usuario',
-                      message: `Tem certeza que deseja excluir ${userName}? Essa acao nao podera ser desfeita.`,
-                      confirmLabel: 'Excluir usuario',
-                      tone: 'danger',
-                      run: async () => { await handleDeleteUser(user.id) },
-                    })
-                  }
-                  className="action-chip danger icon-action-chip"
-                ><Trash2 size={15} /> Excluir</button>
+                {isSuperAdmin ? (
+                  <button
+                    onClick={() =>
+                      openActionConfirmation({
+                        title: 'Resetar senha',
+                        message: `Tem certeza que deseja gerar uma nova senha temporaria para ${userName}? No proximo login, ele tera que cadastrar uma nova senha.`,
+                        confirmLabel: 'Resetar senha',
+                        run: async () => { await handleResetPassword(user, true) },
+                      })
+                    }
+                    className="action-chip icon-action-chip"
+                  ><KeyRound size={15} /> Resetar senha</button>
+                ) : null}
+                {isSuperAdmin ? (
+                  <button
+                    onClick={() =>
+                      openActionConfirmation({
+                        title: 'Excluir usuario',
+                        message: `Tem certeza que deseja excluir ${userName}? Essa acao nao podera ser desfeita.`,
+                        confirmLabel: 'Excluir usuario',
+                        tone: 'danger',
+                        run: async () => { await handleDeleteUser(user.id) },
+                      })
+                    }
+                    className="action-chip danger icon-action-chip"
+                  ><Trash2 size={15} /> Excluir</button>
+                ) : null}
               </div>
             </div>
           )

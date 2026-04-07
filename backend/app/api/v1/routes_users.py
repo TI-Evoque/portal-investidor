@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import is_super_admin, require_admin
 from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.user import User
@@ -12,6 +12,14 @@ from app.services.email_service import send_password_changed_email
 from app.services.user_service import get_unit_ids_map, serialize_user, sync_user_units
 
 router = APIRouter(prefix='/users', tags=['users'])
+ALLOWED_ROLES = {'investor', 'admin', 'super_admin'}
+
+
+def _ensure_manageable_role(current_admin: User, target_role: str) -> None:
+    if target_role not in ALLOWED_ROLES:
+        raise HTTPException(status_code=422, detail='Perfil invalido')
+    if target_role in {'admin', 'super_admin'} and not is_super_admin(current_admin):
+        raise HTTPException(status_code=403, detail='Apenas o super admin pode conceder perfis administrativos')
 
 
 @router.get('', response_model=list[UserOut])
@@ -25,13 +33,13 @@ def list_users(db: Session = Depends(get_db), _: object = Depends(require_admin)
 
 
 @router.post('', response_model=AdminCreateUserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
     normalized_email = payload.email.strip().lower()
     nome = payload.nome.strip()
     sobrenome = payload.sobrenome.strip()
     telefone = payload.telefone.strip()
-    if payload.role not in ('admin', 'investor'):
-        raise HTTPException(status_code=422, detail='Perfil invalido')
+    requested_role = (payload.role or 'investor').strip()
+    _ensure_manageable_role(current_admin, requested_role)
 
     existing = db.query(User).filter(User.email == normalized_email).first()
     if existing:
@@ -45,7 +53,7 @@ def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), 
         email=normalized_email,
         telefone=telefone or None,
         password_hash=get_password_hash(generated_password),
-        role=payload.role,
+        role=requested_role,
         is_active=True,
         is_authorized=bool(payload.is_authorized),
         must_change_password=bool(payload.must_change_password),
@@ -86,11 +94,25 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
 
     data = payload.model_dump(exclude_none=True)
     unit_ids = data.pop('unit_ids', None)
-    role = data.get('role')
-    if role not in (None, 'admin', 'investor'):
-        raise HTTPException(status_code=422, detail='Perfil invalido')
+    requested_role = data.get('role')
+
     if user.id == current_admin.id and data.get('is_active') is False:
         raise HTTPException(status_code=400, detail='Voce nao pode bloquear o proprio usuario')
+
+    if requested_role is not None:
+        _ensure_manageable_role(current_admin, requested_role)
+        if not is_super_admin(current_admin):
+          raise HTTPException(status_code=403, detail='Apenas o super admin pode alterar o perfil do usuario')
+        if user.id == current_admin.id and requested_role != 'super_admin':
+            raise HTTPException(status_code=400, detail='Voce nao pode remover o proprio perfil de super admin')
+
+    if not is_super_admin(current_admin):
+        forbidden_fields = {'nome', 'sobrenome', 'telefone', 'must_change_password'}
+        attempted = forbidden_fields.intersection(data.keys())
+        if attempted:
+            raise HTTPException(status_code=403, detail='O admin pode apenas bloquear, liberar acesso ou criar usuarios')
+        if unit_ids is not None:
+            raise HTTPException(status_code=403, detail='O admin nao pode editar unidades vinculadas por esta tela')
 
     for key, value in data.items():
         setattr(user, key, value)
@@ -115,6 +137,9 @@ def reset_user_password(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
+    if not is_super_admin(current_admin):
+        raise HTTPException(status_code=403, detail='Apenas o super admin pode resetar senhas por esta tela')
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
@@ -152,6 +177,9 @@ def reset_user_password(
 
 @router.delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
+    if not is_super_admin(current_admin):
+        raise HTTPException(status_code=403, detail='Apenas o super admin pode excluir usuarios')
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')

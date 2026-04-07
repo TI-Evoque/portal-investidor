@@ -7,7 +7,7 @@ export interface User {
   sobrenome?: string | null
   email: string
   telefone?: string | null
-  role: 'admin' | 'investor'
+  role: 'super_admin' | 'admin' | 'investor'
   is_authorized: boolean
   must_change_password?: boolean
 }

@@ -8,6 +8,7 @@ import { SectionHeader } from '../../components/ui/SectionHeader'
 import { UnitFormModal } from '../../components/modals/UnitFormModal'
 import { Pagination } from '../../components/ui/Pagination'
 import { AuthenticatedImage } from '../../components/ui/AuthenticatedImage'
+import { useAuth } from '../../contexts/AuthContext'
 
 const ITEMS_PER_PAGE = 10
 const currentYear = new Date().getFullYear()
@@ -294,7 +295,7 @@ function UnitUsersModal({
                 <strong>{user.nome} {user.sobrenome || ''}</strong>
                 <span>{user.email}</span>
               </div>
-              <div className="pill-status ok">{user.role === 'admin' ? 'Administrador' : 'Investidor'}</div>
+              <div className="pill-status ok">{user.role === 'super_admin' ? 'Super admin' : user.role === 'admin' ? 'Administrador' : 'Investidor'}</div>
             </div>
           ))}
         </div>
@@ -304,6 +305,8 @@ function UnitUsersModal({
 }
 
 export function UnitsPage() {
+  const { user } = useAuth()
+  const isSuperAdmin = user?.role === 'super_admin'
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -444,7 +447,7 @@ export function UnitsPage() {
               <button onClick={() => openUnitFiles(unit)} title="Upload e PDFs" className="icon-square-btn"><FolderUp size={18} /></button>
               <button onClick={() => openUnitUsers(unit)} title="Investidores associados" className="icon-square-btn"><FilePenLine size={18} /></button>
               <button onClick={() => handleOpenEditModal(unit)} title="Editar" className="icon-square-btn"><PencilLine size={18} /></button>
-              <button onClick={() => handleDelete(unit.id)} title="Deletar" className="icon-square-btn"><Trash2 size={18} /></button>
+              {isSuperAdmin ? <button onClick={() => handleDelete(unit.id)} title="Deletar" className="icon-square-btn"><Trash2 size={18} /></button> : null}
             </div>
           </div>
         ))}

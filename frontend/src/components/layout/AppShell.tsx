@@ -18,7 +18,7 @@ const investorItems = [
   ['/investidor', 'Minhas Unidades', House],
 ] as const
 
-  const items = user?.role === 'admin' ? adminItems : investorItems
+  const items = user?.role === 'admin' || user?.role === 'super_admin' ? adminItems : investorItems
 
   const handleLogout = () => {
     logout()

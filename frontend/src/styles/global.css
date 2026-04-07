@@ -1354,6 +1354,80 @@ button, input { font: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.user-unit-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.user-unit-picker-field {
+  margin: 0;
+}
+
+.user-unit-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 88px;
+  justify-content: center;
+}
+
+.user-unit-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.user-unit-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #ffd5bc;
+  border-radius: 16px;
+  background: #fff8f3;
+}
+
+.user-unit-card-copy {
+  min-width: 0;
+}
+
+.user-unit-card-copy strong {
+  display: block;
+  font-size: 15px;
+  color: #222;
+}
+
+.user-unit-card-copy span {
+  display: block;
+  margin-top: 4px;
+  color: #777;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-unit-card-remove {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #f2c2aa;
+  border-radius: 12px;
+  background: white;
+  color: #cc5a20;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-unit-card-remove:hover {
+  background: #fff1e8;
+}
+
 @media (max-width: 1200px) {
   .files-filters-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1362,6 +1436,10 @@ button, input { font: inherit; }
 
 @media (max-width: 700px) {
   .files-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-unit-picker {
     grid-template-columns: 1fr;
   }
 }

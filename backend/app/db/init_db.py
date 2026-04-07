@@ -1,6 +1,7 @@
 from sqlalchemy import inspect
+
 from app.db.base import Base
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
 
 # Garantir registro de todos os models
 from app.models.user import User  # noqa: F401
@@ -23,3 +24,10 @@ def init_db() -> None:
     # Se o banco ainda estiver vazio, cria as tabelas mapeadas pelos models.
     if not required_tables.issubset(existing_tables):
         Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        db.query(User).filter(User.role == 'admin').update({'role': 'super_admin'}, synchronize_session=False)
+        db.commit()
+    finally:
+        db.close()

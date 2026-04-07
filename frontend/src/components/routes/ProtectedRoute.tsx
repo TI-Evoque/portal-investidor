@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: 'admin' | 'investor'
+  requiredRole?: 'admin' | 'investor' | 'super_admin'
   requiresAuthorization?: boolean
 }
 
@@ -31,7 +31,12 @@ export function ProtectedRoute({
   return <Navigate to="/trocar-senha" replace />
 }
 
-  if (requiredRole && user?.role !== requiredRole) {
+  const satisfiesRole =
+    !requiredRole ||
+    user?.role === requiredRole ||
+    (requiredRole === 'admin' && user?.role === 'super_admin')
+
+  if (!satisfiesRole) {
     return <Navigate to="/" replace />
   }
 
