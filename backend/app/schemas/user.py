@@ -25,6 +25,7 @@ class UserOut(BaseModel):
 class UserUpdateRequest(BaseModel):
     nome: str | None = None
     sobrenome: str | None = None
+    email: EmailStr | None = None
     cpf: str | None = None
     telefone: str | None = None
     is_active: bool | None = None

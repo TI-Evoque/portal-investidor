@@ -17,6 +17,7 @@ interface UserEditModalProps {
 export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
   const [activeTab, setActiveTab] = useState<EditTab>('dados')
   const [formData, setFormData] = useState<Partial<User>>({
+    email: user.email,
     is_authorized: user.is_authorized,
     role: user.role,
     is_active: user.is_active,
@@ -111,7 +112,12 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
                 </div>
                 <div className="form-group">
                   <label>E-mail</label>
-                  <input type="email" value={user.email} disabled className="input-disabled" />
+                  <input
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    placeholder="investidor@exemplo.com"
+                  />
                 </div>
                 <div className="form-group">
                   <label>CPF</label>

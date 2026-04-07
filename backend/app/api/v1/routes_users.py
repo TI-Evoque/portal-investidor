@@ -167,6 +167,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
     data = payload.model_dump(exclude_none=True)
     unit_ids = data.pop('unit_ids', None)
     requested_role = data.get('role')
+    email_value = data.get('email')
     cpf_value = data.get('cpf')
 
     if user.id == current_admin.id and data.get('is_active') is False:
@@ -178,6 +179,13 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
           raise HTTPException(status_code=403, detail='Apenas o super admin pode alterar o perfil do usuario')
         if user.id == current_admin.id and requested_role != 'super_admin':
             raise HTTPException(status_code=400, detail='Voce nao pode remover o proprio perfil de super admin')
+
+    if email_value is not None:
+        normalized_email = email_value.strip().lower()
+        existing_email = db.query(User).filter(User.email == normalized_email, User.id != user.id).first()
+        if existing_email:
+            raise HTTPException(status_code=409, detail='Ja existe um usuario com esse e-mail')
+        data['email'] = normalized_email
 
     if cpf_value is not None:
         normalized_cpf = normalize_cpf(cpf_value)

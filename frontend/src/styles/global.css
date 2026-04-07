@@ -256,6 +256,37 @@ button, input { font: inherit; }
   border-radius: 24px;
   padding: 24px;
 }
+.modal-card-created-user {
+  width: min(430px, calc(100vw - 32px));
+  border-radius: 24px;
+  padding: 24px;
+}
+.created-user-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.credential-box,
+.info-box {
+  border: 1px solid #ececec;
+  border-radius: 18px;
+  padding: 16px;
+  background: #fcfcfc;
+}
+.credential-box strong {
+  display: block;
+  margin-bottom: 8px;
+}
+.credential-box span {
+  display: block;
+  font-size: 15px;
+  color: #333;
+  word-break: break-word;
+}
+.credential-copy-btn {
+  margin-top: 12px;
+  width: 100%;
+}
 .send-user-message-copy {
   margin: 0 0 14px;
   color: #666;

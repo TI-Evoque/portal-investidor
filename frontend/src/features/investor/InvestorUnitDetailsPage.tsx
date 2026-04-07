@@ -5,7 +5,7 @@ import api from '../../lib/api'
 import { PortalFile, Unit } from '../../types'
 
 const MONTH_ORDER = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
 
@@ -15,17 +15,10 @@ function monthSortValue(month: string) {
 }
 
 function formatDate(dateValue?: string) {
-  if (!dateValue) return 'Data não informada'
+  if (!dateValue) return 'Data nao informada'
   const date = new Date(dateValue)
   if (Number.isNaN(date.getTime())) return dateValue
   return date.toLocaleDateString('pt-BR')
-}
-
-function normalizeIsoDate(value?: string) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 10)
 }
 
 export function InvestorUnitDetailsPage() {
@@ -38,13 +31,10 @@ export function InvestorUnitDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
-  // Estados dos Filtros
   const [yearFilter, setYearFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     if (!unitId || Number.isNaN(unitId)) return
@@ -72,7 +62,9 @@ export function InvestorUnitDetailsPage() {
     }
 
     void loadPage()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+    }
   }, [unitId])
 
   async function handleDownload(file: PortalFile) {
@@ -94,33 +86,36 @@ export function InvestorUnitDetailsPage() {
     }
   }
 
-  const years = useMemo(() => {
-    return Array.from(new Set(files.map((file) => String(file.ano_referencia)))).sort((a, b) => Number(b) - Number(a))
-  }, [files])
+  const years = useMemo(
+    () => Array.from(new Set(files.map((file) => String(file.ano_referencia)))).sort((a, b) => Number(b) - Number(a)),
+    [files]
+  )
 
-  const months = useMemo(() => {
-    return Array.from(new Set(files.map((file) => file.mes_referencia))).sort((a, b) => monthSortValue(a) - monthSortValue(b))
-  }, [files])
+  const months = useMemo(
+    () => Array.from(new Set(files.map((file) => file.mes_referencia))).sort((a, b) => monthSortValue(a) - monthSortValue(b)),
+    [files]
+  )
 
-  const types = useMemo(() => {
-    return Array.from(new Set(files.map((file) => file.tipo_arquivo))).sort((a, b) => a.localeCompare(b))
-  }, [files])
+  const types = useMemo(
+    () => Array.from(new Set(files.map((file) => file.tipo_arquivo))).sort((a, b) => a.localeCompare(b)),
+    [files]
+  )
 
   const filteredFiles = useMemo(() => {
     return files.filter((file) => {
       if (yearFilter && String(file.ano_referencia) !== yearFilter) return false
       if (monthFilter && file.mes_referencia !== monthFilter) return false
       if (typeFilter && file.tipo_arquivo !== typeFilter) return false
-      if (searchFilter && 
-          !file.titulo.toLowerCase().includes(searchFilter.toLowerCase()) && 
-          !file.nome_arquivo.toLowerCase().includes(searchFilter.toLowerCase())) return false
-
-      const fileDate = normalizeIsoDate(file.created_at)
-      if (startDate && fileDate && fileDate < startDate) return false
-      if (endDate && fileDate && fileDate > endDate) return false
+      if (
+        searchFilter &&
+        !file.titulo.toLowerCase().includes(searchFilter.toLowerCase()) &&
+        !file.nome_arquivo.toLowerCase().includes(searchFilter.toLowerCase())
+      ) {
+        return false
+      }
       return true
     })
-  }, [files, yearFilter, monthFilter, typeFilter, searchFilter, startDate, endDate])
+  }, [files, yearFilter, monthFilter, typeFilter, searchFilter])
 
   const groupedFiles = useMemo(() => {
     const grouped = filteredFiles.reduce<Record<string, Record<string, PortalFile[]>>>((acc, file) => {
@@ -147,8 +142,6 @@ export function InvestorUnitDetailsPage() {
     setMonthFilter('')
     setTypeFilter('')
     setSearchFilter('')
-    setStartDate('')
-    setEndDate('')
   }
 
   const lastUpload = useMemo(() => {
@@ -167,7 +160,7 @@ export function InvestorUnitDetailsPage() {
           </button>
           <div>
             <h2>{unit?.nome || 'Detalhes da unidade'}</h2>
-            <p>Consulte suas DRE's</p>
+            <p>Consulte suas DREs</p>
           </div>
         </div>
       </div>
@@ -183,14 +176,14 @@ export function InvestorUnitDetailsPage() {
         <div className="stat-card dark">
           <div className="stat-icon"><CalendarRange size={22} /></div>
           <div>
-            <div className="stat-title">Último envio</div>
+            <div className="stat-title">Ultimo envio</div>
             <div className="stat-value">{lastUpload}</div>
           </div>
         </div>
         <div className="stat-card orange">
           <div className="stat-icon"><Filter size={22} /></div>
           <div>
-            <div className="stat-title">Anos disponíveis</div>
+            <div className="stat-title">Anos disponiveis</div>
             <div className="stat-value">{years.length || 0}</div>
           </div>
         </div>
@@ -200,14 +193,14 @@ export function InvestorUnitDetailsPage() {
         <div className="table-top investor-filter-top">
           <div>
             <h3>Filtros da unidade</h3>
-            <span>Refine por ano, mês, tipo, período e título.</span>
+            <span>Refine por ano, mes, tipo e titulo.</span>
           </div>
           <button type="button" className="outline-soft" onClick={clearFilters}>Limpar filtros</button>
         </div>
 
         <div className="investor-filter-grid">
           <label className="investor-filter-field investor-search-field">
-            <span><Search size={14} /> Buscar por título</span>
+            <span><Search size={14} /> Buscar por titulo</span>
             <input value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Ex.: DRE, fluxo, fechamento..." />
           </label>
 
@@ -220,7 +213,7 @@ export function InvestorUnitDetailsPage() {
           </label>
 
           <label className="investor-filter-field">
-            <span>Mês</span>
+            <span>Mes</span>
             <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
               <option value="">Todos os meses</option>
               {months.map((month) => (
@@ -238,23 +231,13 @@ export function InvestorUnitDetailsPage() {
               {types.map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
           </label>
-
-          <label className="investor-filter-field">
-            <span>Data inicial</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </label>
-
-          <label className="investor-filter-field">
-            <span>Data final</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </label>
         </div>
       </div>
 
       <div className="table-card investor-document-card">
         <div className="table-top investor-filter-top">
           <div>
-            <h3>Documentos organizados por ano e mês</h3>
+            <h3>Documentos organizados por ano e mes</h3>
             <span>Selecione os filtros acima para refinar a listagem.</span>
           </div>
         </div>
@@ -272,7 +255,7 @@ export function InvestorUnitDetailsPage() {
 
               <div className="investor-month-stack">
                 {yearGroup.months.map((monthGroup) => {
-                  const monthLabel = MONTH_ORDER[parseInt(monthGroup.month, 10) - 1] || monthGroup.month;
+                  const monthLabel = MONTH_ORDER[parseInt(monthGroup.month, 10) - 1] || monthGroup.month
                   return (
                     <div key={`${yearGroup.year}-${monthGroup.month}`} className="investor-month-group">
                       <div className="investor-month-header">
@@ -302,7 +285,7 @@ export function InvestorUnitDetailsPage() {
                         ))}
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             </section>

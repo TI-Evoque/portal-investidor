@@ -401,7 +401,6 @@ export function UnitsPage() {
         title="Unidades"
         action={
           <div className="header-actions">
-            <button className="outline-soft">Exportar</button>
             <button className="outline-soft" onClick={handleOpenCreateModal}>+ Cadastrar unidade</button>
           </div>
         }
