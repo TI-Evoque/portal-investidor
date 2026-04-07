@@ -1,0 +1,15 @@
+DB_HOST=evoque-database.mysql.database.azure.com
+DB_USER=infra
+DB_PASSWORD=sua-senha-aqui
+DB_NAME=portal-investidor
+DB_PORT=3306
+DB_SSL_ENABLED=true
+
+SECRET_KEY=uma-chave-secreta-longa-aqui
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+FRONTEND_URL=http://localhost:3020
+
+GRAPH_CLIENT_ID=seu-valor
+GRAPH_CLIENT_SECRET=seu-valor
+GRAPH_TENANT_ID=seu-valor
+GRAPH_USER_ID=seu-valor
