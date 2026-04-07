@@ -1,4 +1,4 @@
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
@@ -25,9 +25,22 @@ def init_db() -> None:
     if not required_tables.issubset(existing_tables):
         Base.metadata.create_all(bind=engine)
 
+    user_columns = {column['name'] for column in inspector.get_columns('users')} if 'users' in inspector.get_table_names() else set()
+    if 'users' in existing_tables and 'last_seen_at' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text('ALTER TABLE users ADD COLUMN last_seen_at DATETIME NULL'))
+    if 'users' in existing_tables and 'force_logout_pending' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text('ALTER TABLE users ADD COLUMN force_logout_pending BOOLEAN NOT NULL DEFAULT 0'))
+    if 'users' in existing_tables and 'admin_message' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text('ALTER TABLE users ADD COLUMN admin_message VARCHAR(1000) NULL'))
+
     db = SessionLocal()
     try:
-        db.query(User).filter(User.role == 'admin').update({'role': 'super_admin'}, synchronize_session=False)
-        db.commit()
+        has_super_admin = db.query(User).filter(User.role == 'super_admin').first()
+        if not has_super_admin:
+            db.query(User).filter(User.role == 'admin').update({'role': 'super_admin'}, synchronize_session=False)
+            db.commit()
     finally:
         db.close()

@@ -1,15 +1,18 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import is_super_admin, require_admin
+from app.api.deps.auth import is_super_admin, require_admin, require_super_admin
 from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, UserOut, UserUpdateRequest
-from app.services.auth_service import generate_placeholder_cpf, generate_temporary_password
+from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUpdateRequest
+from app.services.auth_service import generate_temporary_password
 from app.services.email_service import send_password_changed_email
-from app.services.user_service import get_unit_ids_map, serialize_user, sync_user_units
+from app.services.user_service import ONLINE_WINDOW, get_unit_ids_map, serialize_user, sync_user_units
+from app.utils.validators import normalize_cpf
 
 router = APIRouter(prefix='/users', tags=['users'])
 ALLOWED_ROLES = {'investor', 'admin', 'super_admin'}
@@ -22,6 +25,13 @@ def _ensure_manageable_role(current_admin: User, target_role: str) -> None:
         raise HTTPException(status_code=403, detail='Apenas o super admin pode conceder perfis administrativos')
 
 
+def _ensure_manageable_user(current_admin: User, target_user: User) -> None:
+    if target_user.id == current_admin.id:
+        raise HTTPException(status_code=400, detail='Voce nao pode derrubar o proprio acesso')
+    if target_user.role == 'super_admin' and not is_super_admin(current_admin):
+        raise HTTPException(status_code=403, detail='O admin nao pode executar essa acao em um super admin')
+
+
 @router.get('', response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db), _: object = Depends(require_admin)):
     try:
@@ -32,24 +42,86 @@ def list_users(db: Session = Depends(get_db), _: object = Depends(require_admin)
         raise HTTPException(status_code=500, detail=f'Nao foi possivel carregar os usuarios: {exc}')
 
 
+@router.get('/online', response_model=list[UserOut])
+def list_online_users(db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
+    try:
+        cutoff = datetime.utcnow() - ONLINE_WINDOW
+        query = db.query(User).filter(
+            User.is_active.is_(True),
+            User.last_seen_at.is_not(None),
+            User.last_seen_at >= cutoff,
+        )
+        if not is_super_admin(current_admin):
+            query = query.filter(User.role != 'super_admin')
+
+        users = query.order_by(User.last_seen_at.desc(), User.id.desc()).all()
+        unit_map = get_unit_ids_map(db, [user.id for user in users])
+        return [serialize_user(user, unit_map.get(user.id, [])) for user in users]
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f'Nao foi possivel carregar os usuarios online: {exc}')
+
+
+@router.post('/{user_id}/kick-access')
+def kick_user_access(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Usuario nao encontrado')
+
+    _ensure_manageable_user(current_admin, user)
+    user.force_logout_pending = True
+    user.last_seen_at = None
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f'Erro ao derrubar acesso do usuario: {exc}')
+
+    return {'message': 'Acesso derrubado com sucesso'}
+
+
+@router.post('/{user_id}/admin-message')
+def send_admin_message(
+    user_id: int,
+    payload: AdminMessageRequest,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Usuario nao encontrado')
+
+    _ensure_manageable_user(current_admin, user)
+    user.admin_message = payload.message.strip()
+
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f'Erro ao enviar mensagem ao usuario: {exc}')
+
+    return {'message': 'Mensagem enviada com sucesso'}
+
+
 @router.post('', response_model=AdminCreateUserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
     normalized_email = payload.email.strip().lower()
     nome = payload.nome.strip()
     sobrenome = payload.sobrenome.strip()
+    cpf = normalize_cpf(payload.cpf)
     telefone = payload.telefone.strip()
     requested_role = (payload.role or 'investor').strip()
     _ensure_manageable_role(current_admin, requested_role)
 
-    existing = db.query(User).filter(User.email == normalized_email).first()
+    existing = db.query(User).filter((User.email == normalized_email) | (User.cpf == cpf)).first()
     if existing:
-        raise HTTPException(status_code=409, detail='Ja existe um usuario com esse e-mail')
+        raise HTTPException(status_code=409, detail='Ja existe um usuario com esse e-mail ou CPF')
 
     generated_password = generate_temporary_password(6)
     user = User(
         nome=nome,
         sobrenome=sobrenome or None,
-        cpf=generate_placeholder_cpf(db),
+        cpf=cpf,
         email=normalized_email,
         telefone=telefone or None,
         password_hash=get_password_hash(generated_password),
@@ -95,6 +167,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
     data = payload.model_dump(exclude_none=True)
     unit_ids = data.pop('unit_ids', None)
     requested_role = data.get('role')
+    cpf_value = data.get('cpf')
 
     if user.id == current_admin.id and data.get('is_active') is False:
         raise HTTPException(status_code=400, detail='Voce nao pode bloquear o proprio usuario')
@@ -106,8 +179,15 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         if user.id == current_admin.id and requested_role != 'super_admin':
             raise HTTPException(status_code=400, detail='Voce nao pode remover o proprio perfil de super admin')
 
+    if cpf_value is not None:
+        normalized_cpf = normalize_cpf(cpf_value)
+        existing_cpf = db.query(User).filter(User.cpf == normalized_cpf, User.id != user.id).first()
+        if existing_cpf:
+            raise HTTPException(status_code=409, detail='Ja existe um usuario com esse CPF')
+        data['cpf'] = normalized_cpf
+
     if not is_super_admin(current_admin):
-        forbidden_fields = {'nome', 'sobrenome', 'telefone', 'must_change_password'}
+        forbidden_fields = {'nome', 'sobrenome', 'cpf', 'telefone', 'must_change_password'}
         attempted = forbidden_fields.intersection(data.keys())
         if attempted:
             raise HTTPException(status_code=403, detail='O admin pode apenas bloquear, liberar acesso ou criar usuarios')

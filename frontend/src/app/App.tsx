@@ -10,6 +10,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { UnitsPage } from '../features/units/UnitsPage'
 import { FilesPage } from '../features/files/FilesPage'
 import { UsersPage } from '../features/users/UsersPage'
+import { AccessVisibilityPage } from '../features/access/AccessVisibilityPage'
 import { InvestorHomePage } from '../features/investor/InvestorHomePage'
 import { InvestorUnitDetailsPage } from '../features/investor/InvestorUnitDetailsPage'
 
@@ -44,6 +45,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="visibilidade-acessos"
+            element={
+              <ProtectedRoute requiredRole="super_admin">
+                <AccessVisibilityPage />
               </ProtectedRoute>
             }
           />

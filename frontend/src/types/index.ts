@@ -11,6 +11,8 @@ export type User = {
   is_active: boolean
   is_authorized: boolean
   must_change_password?: boolean
+  last_seen_at?: string | null
+  is_online?: boolean
   unit_ids: number[]
 }
 export type PortalFile = { id: number; titulo: string; nome_arquivo: string; tipo_arquivo: string; mes_referencia: string; ano_referencia: number; unit_ids: number[]; unit_names: string[]; created_at?: string }

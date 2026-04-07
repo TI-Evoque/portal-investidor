@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Unit } from '../../types'
 import { useCep } from '../../lib/useCep'
+import { formatCpf, isValidCpf } from '../../lib/cpf'
 import { formatPhone, isValidCellPhone } from '../../lib/phone'
 import { useAuth } from '../../contexts/AuthContext'
 
 export type CreateUserPayload = {
   nome: string
   sobrenome: string
+  cpf: string
   email: string
   telefone: string
   must_change_password: boolean
@@ -27,11 +29,13 @@ interface UserCreateModalProps {
 export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalProps) {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
+  const formRef = useRef<HTMLFormElement>(null)
   const [activeTab, setActiveTab] = useState<CreateTab>('dados')
   const [pendingUnitId, setPendingUnitId] = useState<string>('')
   const [formData, setFormData] = useState<CreateUserPayload>({
     nome: '',
     sobrenome: '',
+    cpf: '',
     email: '',
     telefone: '',
     must_change_password: true,
@@ -79,10 +83,29 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
     handleChange('unit_ids', formData.unit_ids.filter((id) => id !== unitId))
   }
 
+  const goToUnitsTab = () => {
+    if (!formRef.current?.reportValidity()) return
+    if (!isValidCpf(formData.cpf)) {
+      setError('Informe um CPF valido no formato 000.000.000-00.')
+      return
+    }
+    if (!isValidCellPhone(formData.telefone)) {
+      setError('Informe um celular com DDD no formato (11) 99999-9999.')
+      return
+    }
+    setError('')
+    setActiveTab('unidades')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isValidCellPhone(formData.telefone)) {
       setError('Informe um celular com DDD no formato (11) 99999-9999.')
+      setActiveTab('dados')
+      return
+    }
+    if (!isValidCpf(formData.cpf)) {
+      setError('Informe um CPF valido no formato 000.000.000-00.')
       setActiveTab('dados')
       return
     }
@@ -115,7 +138,7 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
           <button type="button" className={tabClassName('unidades')} onClick={() => setActiveTab('unidades')}>Unidades</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-form modal-form-user-create">
+        <form ref={formRef} onSubmit={handleSubmit} className="modal-form modal-form-user-create">
           {activeTab === 'dados' ? (
             <>
               <div className="modal-section modal-tab-panel">
@@ -132,6 +155,17 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
                   <div className="form-group">
                     <label>E-mail</label>
                     <input type="email" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="investidor@exemplo.com" required />
+                  </div>
+                  <div className="form-group">
+                    <label>CPF</label>
+                    <input
+                      value={formData.cpf}
+                      onChange={(e) => handleChange('cpf', formatCpf(e.target.value))}
+                      placeholder="000.000.000-00"
+                      inputMode="numeric"
+                      maxLength={14}
+                      required
+                    />
                   </div>
                   <div className="form-group">
                     <label>Telefone / WhatsApp</label>
@@ -237,7 +271,7 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="btn-secondary" disabled={loading}>Cancelar</button>
             {activeTab === 'dados' ? (
-              <button type="button" className="btn-primary" onClick={() => setActiveTab('unidades')}>
+              <button type="button" className="btn-primary" onClick={goToUnitsTab}>
                 Ir para unidades
               </button>
             ) : (

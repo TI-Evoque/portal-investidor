@@ -9,8 +9,26 @@ const api = axios.create({
   timeout: 15000,
 })
 
+function shouldTrackLoading(url?: string) {
+  if (!url) return true
+
+  return !url.includes('/auth/heartbeat') && !url.includes('/auth/acknowledge-message')
+}
+
+function emitAdminMessageFromHeaders(headers?: Record<string, unknown>) {
+  const headerValue = headers?.['x-admin-message']
+  if (typeof headerValue === 'string' && headerValue.trim()) {
+    window.dispatchEvent(new CustomEvent('portal-admin-message', { detail: headerValue.trim() }))
+  }
+}
+
 api.interceptors.request.use((config) => {
-  beginApiRequest()
+  if (shouldTrackLoading(config.url)) {
+    beginApiRequest()
+    config.headers['X-Skip-Global-Loading'] = 'false'
+  } else {
+    config.headers['X-Skip-Global-Loading'] = 'true'
+  }
   const token = localStorage.getItem('portal_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -23,11 +41,17 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
-    endApiRequest()
+    emitAdminMessageFromHeaders(response.headers as Record<string, unknown>)
+    if (response.config.headers['X-Skip-Global-Loading'] !== 'true') {
+      endApiRequest()
+    }
     return response
   },
   (error) => {
-    endApiRequest()
+    emitAdminMessageFromHeaders(error.response?.headers as Record<string, unknown> | undefined)
+    if (error.config?.headers?.['X-Skip-Global-Loading'] !== 'true') {
+      endApiRequest()
+    }
     if (error.response?.status === 401) {
       localStorage.removeItem('portal_token')
       localStorage.removeItem('portal_user')

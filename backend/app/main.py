@@ -1,12 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from app.api.v1 import routes_auth, routes_dashboard, routes_files, routes_investor, routes_units, routes_users
 from app.core.config import settings
+from app.core.security import decode_token
 from app.core.middleware import SecurityHeadersMiddleware
 from app.db.init_db import init_db
+from app.db.session import SessionLocal
+from app.models.user import User
 from pathlib import Path
 
 # Swagger local (sem CDN externo que seria bloqueado pela CSP)
@@ -27,6 +30,37 @@ app.add_middleware(SecurityHeadersMiddleware)
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.middleware('http')
+async def inject_admin_message(request: Request, call_next):
+    response = await call_next(request)
+
+    if request.url.path.endswith('/auth/acknowledge-message'):
+        return response
+
+    authorization = request.headers.get('authorization', '')
+    if not authorization.startswith('Bearer '):
+        return response
+
+    token = authorization.replace('Bearer ', '', 1).strip()
+    if not token:
+        return response
+
+    db = SessionLocal()
+    try:
+        try:
+            email = decode_token(token)
+        except Exception:
+            return response
+
+        user = db.query(User).filter(User.email == email).first()
+        if user and user.admin_message:
+            response.headers['X-Admin-Message'] = user.admin_message
+    finally:
+        db.close()
+
+    return response
 
 
 @app.get("/docs", include_in_schema=False)

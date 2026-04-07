@@ -78,8 +78,10 @@ def login_user(db: Session, *, email: str, password: str) -> dict:
 
     if password_needs_rehash(user.password_hash):
         user.password_hash = get_password_hash(password)
-        db.commit()
-        db.refresh(user)
+    user.last_seen_at = datetime.utcnow()
+    user.force_logout_pending = False
+    db.commit()
+    db.refresh(user)
 
     token = create_access_token(user.email)
     return {

@@ -34,7 +34,7 @@ export function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [summaryFilter, setSummaryFilter] = useState<'all' | 'active' | 'admin'>('all')
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'active' | 'inactive' | 'admin' | 'super_admin'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [editingUser, setEditingUser] = useState<User | undefined>()
   const [isCreatingUser, setIsCreatingUser] = useState(false)
@@ -72,11 +72,18 @@ export function UsersPage() {
     void Promise.all([loadUsers(), loadUnits()])
   }, [])
 
+  const visibleUsers = useMemo(
+    () => (isSuperAdmin ? users : users.filter((user) => user.role !== 'super_admin')),
+    [isSuperAdmin, users]
+  )
+
   const filteredUsers = useMemo(
     () =>
-      users.filter((user) => {
+      visibleUsers.filter((user) => {
         if (summaryFilter === 'active' && !user.is_active) return false
-        if (summaryFilter === 'admin' && !['admin', 'super_admin'].includes(user.role)) return false
+        if (summaryFilter === 'inactive' && user.is_active) return false
+        if (summaryFilter === 'admin' && user.role !== 'admin') return false
+        if (summaryFilter === 'super_admin' && user.role !== 'super_admin') return false
 
         const fullName = `${user.nome} ${user.sobrenome || ''}`.trim()
         const normalizedSearch = searchTerm.toLowerCase().trim()
@@ -88,7 +95,7 @@ export function UsersPage() {
           (user.telefone || '').toLowerCase().includes(normalizedSearch)
         )
       }),
-    [users, searchTerm, summaryFilter]
+    [visibleUsers, searchTerm, summaryFilter]
   )
 
   useEffect(() => {
@@ -152,9 +159,11 @@ export function UsersPage() {
   }
 
   const summaryItems = [
-    { key: 'all' as const, label: `${users.length} cadastrado(s)` },
-    { key: 'active' as const, label: `${users.filter((user) => user.is_active).length} ativo(s)` },
-    { key: 'admin' as const, label: `${users.filter((user) => ['admin', 'super_admin'].includes(user.role)).length} admin(s)` },
+    { key: 'all' as const, label: `${visibleUsers.length} cadastrado(s)` },
+    { key: 'active' as const, label: `${visibleUsers.filter((user) => user.is_active).length} ativo(s)` },
+    { key: 'inactive' as const, label: `${visibleUsers.filter((user) => !user.is_active).length} desativado(s)` },
+    { key: 'admin' as const, label: `${visibleUsers.filter((user) => user.role === 'admin').length} admin(s)` },
+    ...(isSuperAdmin ? [{ key: 'super_admin' as const, label: `${visibleUsers.filter((user) => user.role === 'super_admin').length} super admin(s)` }] : []),
   ]
 
   const openActionConfirmation = (action: PendingUserAction) => {
@@ -239,7 +248,7 @@ export function UsersPage() {
                 <div className={`pill-status ${user.must_change_password ? 'warn' : 'ok'}`}>{user.must_change_password ? 'Troca de senha pendente' : 'Senha regular'}</div>
               </div>
               <div className="user-actions-grid">
-                {isSuperAdmin ? (
+                {currentUser?.role === 'admin' || isSuperAdmin ? (
                   <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
                 ) : null}
                 {isSuperAdmin && user.role !== 'super_admin' ? (
@@ -283,7 +292,7 @@ export function UsersPage() {
                   }
                   className="action-chip icon-action-chip"
                 >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
-                {isSuperAdmin ? (
+                {currentUser?.role === 'admin' || isSuperAdmin ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({

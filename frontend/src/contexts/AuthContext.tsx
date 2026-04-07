@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AdminNoticeModal } from '../components/modals/AdminNoticeModal'
 import api from '../lib/api'
 
 export interface User {
@@ -10,6 +11,7 @@ export interface User {
   role: 'super_admin' | 'admin' | 'investor'
   is_authorized: boolean
   must_change_password?: boolean
+  admin_message?: string | null
 }
 
 interface AuthContextType {
@@ -27,17 +29,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000
+const HEARTBEAT_INTERVAL_MS = 5 * 1000
 const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click']
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [adminNotice, setAdminNotice] = useState('')
+  const [isAcknowledgingNotice, setIsAcknowledgingNotice] = useState(false)
   const inactivityTimeoutRef = useRef<number | null>(null)
+  const heartbeatIntervalRef = useRef<number | null>(null)
 
   const clearSession = () => {
     localStorage.removeItem('portal_token')
     localStorage.removeItem('portal_user')
     setUser(null)
+    setAdminNotice('')
   }
 
   const clearInactivityTimer = () => {
@@ -47,8 +54,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const clearHeartbeatInterval = () => {
+    if (heartbeatIntervalRef.current !== null) {
+      window.clearInterval(heartbeatIntervalRef.current)
+      heartbeatIntervalRef.current = null
+    }
+  }
+
+  const sendHeartbeat = async () => {
+    if (!localStorage.getItem('portal_token')) return
+    try {
+      const { data } = await api.post<{ ok: boolean; admin_message?: string | null }>('/auth/heartbeat')
+      setAdminNotice(data.admin_message || '')
+    } catch {
+      // O interceptor global ja trata 401 e limpeza de sessao.
+    }
+  }
+
   const logout = () => {
     clearInactivityTimer()
+    clearHeartbeatInterval()
     clearSession()
     if (window.location.pathname !== '/login') {
       window.location.href = '/login'
@@ -76,10 +101,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await api.get<User>('/auth/me')
       localStorage.setItem('portal_user', JSON.stringify(data))
       setUser(data)
+      setAdminNotice(data.admin_message || '')
     } catch {
       clearSession()
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const acknowledgeAdminNotice = async () => {
+    setIsAcknowledgingNotice(true)
+    try {
+      await api.post('/auth/acknowledge-message')
+      setAdminNotice('')
+    } finally {
+      setIsAcknowledgingNotice(false)
     }
   }
 
@@ -88,12 +124,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    const handleAdminMessage = (event: Event) => {
+      const customEvent = event as CustomEvent<string>
+      if (typeof customEvent.detail === 'string' && customEvent.detail.trim()) {
+        setAdminNotice(customEvent.detail.trim())
+      }
+    }
+
+    window.addEventListener('portal-admin-message', handleAdminMessage as EventListener)
+    return () => {
+      window.removeEventListener('portal-admin-message', handleAdminMessage as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!user) {
       clearInactivityTimer()
+      clearHeartbeatInterval()
       return
     }
 
     resetInactivityTimer()
+    void sendHeartbeat()
+    clearHeartbeatInterval()
+    heartbeatIntervalRef.current = window.setInterval(() => {
+      void sendHeartbeat()
+    }, HEARTBEAT_INTERVAL_MS)
+
     ACTIVITY_EVENTS.forEach((eventName) => {
       window.addEventListener(eventName, resetInactivityTimer, { passive: true })
     })
@@ -103,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.removeEventListener(eventName, resetInactivityTimer)
       })
       clearInactivityTimer()
+      clearHeartbeatInterval()
     }
   }, [user])
 
@@ -117,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('portal_token', data.access_token)
     localStorage.setItem('portal_user', JSON.stringify(data.user))
     setUser(data.user)
+    setAdminNotice(data.user.admin_message || '')
     resetInactivityTimer()
 
     return {
@@ -133,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await api.get<User>('/auth/me')
     localStorage.setItem('portal_user', JSON.stringify(data))
     setUser(data)
+    setAdminNotice(data.admin_message || '')
     resetInactivityTimer()
   }
 
@@ -143,20 +203,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.message
   }
 
- async function resetPasswordWithCode(emailOrCpf: string, code: string, newPassword: string): Promise<string> {
-  // Apenas faz a chamada e retorna a mensagem, sem salvar tokens ou logar
-  const response = await api.post('/auth/reset-password-with-code', { 
-    email_or_cpf: emailOrCpf, 
-    code, 
-    new_password: newPassword 
-  });
-  
-  // Garanta que NÃO haja NENHUM "setUser" ou "localStorage.setItem" aqui
-  return response.data.message || 'Senha redefinida com sucesso!';
-}
+  async function resetPasswordWithCode(emailOrCpf: string, code: string, newPassword: string): Promise<string> {
+    const response = await api.post('/auth/reset-password-with-code', {
+      email_or_cpf: emailOrCpf,
+      code,
+      new_password: newPassword,
+    })
+
+    return response.data.message || 'Senha redefinida com sucesso!'
+  }
 
   const register = async () => {
-    throw new Error('Cadastro público desativado')
+    throw new Error('Cadastro publico desativado')
   }
 
   const value = useMemo<AuthContextType>(() => ({
@@ -172,7 +230,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
   }), [user, isLoading])
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {adminNotice ? (
+        <AdminNoticeModal
+          message={adminNotice}
+          loading={isAcknowledgingNotice}
+          onConfirm={acknowledgeAdminNotice}
+        />
+      ) : null}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

@@ -28,6 +28,8 @@ def get_current_user(
     user = db.query(User).filter(User.email == email).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Usuario invalido')
+    if user.force_logout_pending:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Sessao encerrada pelo administrador')
     return user
 
 

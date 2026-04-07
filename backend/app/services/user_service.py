@@ -1,9 +1,17 @@
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.user_unit import UserUnit
 from app.schemas.user import UserOut
+
+ONLINE_WINDOW = timedelta(seconds=75)
+
+
+def is_user_online(user: User) -> bool:
+    if not user.last_seen_at or not user.is_active:
+        return False
+    return user.last_seen_at >= datetime.utcnow() - ONLINE_WINDOW
 
 
 def sync_user_units(db: Session, user: User, unit_ids: list[int]) -> None:
@@ -41,6 +49,8 @@ def serialize_user(user: User, unit_ids: list[int] | None = None) -> UserOut:
         'is_active': bool(user.is_active),
         'is_authorized': bool(user.is_authorized),
         'must_change_password': bool(user.must_change_password),
+        'last_seen_at': user.last_seen_at,
+        'is_online': is_user_online(user),
         'created_at': created_at,
         'updated_at': user.updated_at,
         'unit_ids': unit_ids or [],

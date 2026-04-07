@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { User, Unit } from '../../types'
+import { formatCpf, isValidCpf } from '../../lib/cpf'
 import { MultiSelectDropdown } from '../ui/MultiSelectDropdown'
 import { formatPhone, isValidCellPhone } from '../../lib/phone'
 
@@ -19,6 +20,7 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
     is_authorized: user.is_authorized,
     role: user.role,
     is_active: user.is_active,
+    cpf: formatCpf(user.cpf || ''),
     telefone: user.telefone,
     sobrenome: user.sobrenome,
     must_change_password: user.must_change_password,
@@ -42,6 +44,10 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
     e.preventDefault()
     if (!isValidCellPhone(formData.telefone)) {
       setError('Informe um celular com DDD no formato (11) 99999-9999.')
+      return
+    }
+    if (!isValidCpf(formData.cpf || '')) {
+      setError('Informe um CPF valido no formato 000.000.000-00.')
       return
     }
     setLoading(true)
@@ -106,6 +112,17 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
                 <div className="form-group">
                   <label>E-mail</label>
                   <input type="email" value={user.email} disabled className="input-disabled" />
+                </div>
+                <div className="form-group">
+                  <label>CPF</label>
+                  <input
+                    type="text"
+                    value={formData.cpf || ''}
+                    onChange={(e) => handleChange('cpf', formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                    maxLength={14}
+                  />
                 </div>
                 <div className="form-group">
                   <label>Telefone</label>

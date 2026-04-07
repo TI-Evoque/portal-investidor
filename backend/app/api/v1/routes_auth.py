@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
 from app.api.deps.auth import get_current_user
 from app.core.rate_limit import rate_limit
 from app.db.session import get_db
@@ -20,7 +23,11 @@ def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db
 
 
 @router.get('/me')
-def me(current_user=Depends(get_current_user)):
+def me(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    current_user.last_seen_at = datetime.utcnow()
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return {
         'id': current_user.id,
         'nome': current_user.nome,
@@ -30,7 +37,24 @@ def me(current_user=Depends(get_current_user)):
         'role': current_user.role,
         'is_authorized': current_user.is_authorized,
         'must_change_password': bool(current_user.must_change_password),
+        'admin_message': current_user.admin_message,
     }
+
+
+@router.post('/heartbeat')
+def heartbeat(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    current_user.last_seen_at = datetime.utcnow()
+    db.add(current_user)
+    db.commit()
+    return {'ok': True, 'admin_message': current_user.admin_message}
+
+
+@router.post('/acknowledge-message')
+def acknowledge_message(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    current_user.admin_message = None
+    db.add(current_user)
+    db.commit()
+    return {'ok': True}
 
 
 @router.post('/forgot-password', dependencies=[Depends(rate_limit(5, 300))])
