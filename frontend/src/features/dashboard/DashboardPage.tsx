@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Download, FileText } from 'lucide-react'
 import api from '../../lib/api'
 import { getMonthLabel } from '../../lib/months'
 import { Summary, PortalFile } from '../../types'
@@ -46,7 +47,7 @@ export function DashboardPage() {
 
         {recentFiles.length === 0 ? (
           <div className="file-row">
-            <span className="file-icon">▣</span>
+            <span className="file-icon"><FileText size={18} /></span>
             <span>Nenhum arquivo recente encontrado.</span>
             <span>-</span>
             <span>-</span>
@@ -56,12 +57,12 @@ export function DashboardPage() {
         ) : (
           recentFiles.map((file) => (
             <div className="file-row" key={file.id}>
-              <span className="file-icon">▣</span>
+              <span className="file-icon"><FileText size={18} /></span>
               <span>{file.titulo}</span>
               <span>{Array.isArray(file.unit_names) ? file.unit_names.join(', ') : '-'}</span>
               <span>{file.tipo_arquivo}</span>
               <span>{getMonthLabel(file.mes_referencia)}</span>
-              <span>⇩</span>
+              <span><Download size={16} /></span>
             </div>
           ))
         )}

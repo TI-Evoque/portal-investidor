@@ -1,4 +1,4 @@
-import { Upload, Building2, Users } from 'lucide-react'
+import { Building2, FileText, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 type StatCardProps = {
@@ -10,10 +10,10 @@ type StatCardProps = {
 
 function resolveIcon(title: string) {
   const normalized = title.toLowerCase()
-  if (normalized.includes('upload') || normalized.includes('arquivo')) return Upload
+  if (normalized.includes('upload') || normalized.includes('arquivo')) return FileText
   if (normalized.includes('unidade')) return Building2
-  if (normalized.includes('usuário') || normalized.includes('usuario')) return Users
-  return Upload
+  if (normalized.includes('usuario') || normalized.includes('usuário')) return Users
+  return FileText
 }
 
 export function StatCard({ title, value, accent = 'orange', href }: StatCardProps) {

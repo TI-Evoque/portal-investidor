@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Unit } from '../../types'
 import { useCep } from '../../lib/useCep'
+import { DEFAULT_UNIT_IMAGE } from '../../lib/unitPhoto'
 import { AuthenticatedImage } from '../ui/AuthenticatedImage'
 
 const ESTADOS_BR = [
@@ -131,11 +132,11 @@ export function UnitFormModal({ unit, onClose, onSubmit }: UnitFormModalProps) {
                     src={preview}
                     alt="Foto da unidade"
                     className="photo-upload-preview"
-                    fallback={<div className="photo-placeholder-empty-compact"><span>IMG</span><p>Foto da unidade</p></div>}
+                    fallback={<img src={DEFAULT_UNIT_IMAGE} alt="Imagem padrao da unidade" className="photo-upload-preview" />}
                   />
                 )
               ) : (
-                <div className="photo-placeholder-empty-compact"><span>IMG</span><p>Foto da unidade</p></div>
+                <img src={DEFAULT_UNIT_IMAGE} alt="Imagem padrao da unidade" className="photo-upload-preview" />
               )}
             </div>
 

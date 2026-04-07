@@ -35,14 +35,15 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // INTEGRAÇÃO DO HOOK DE CEP
   const { fetchCep, formatCep, loadingCep, cepError } = useCep((data) => {
-    // Aqui você define o que acontece quando o CEP é encontrado.
-    // Como o seu formulário de USUÁRIO não parece ter campos de endereço (apenas o de UNIDADES tem),
-    // você pode usar isso para logs ou validar se o investidor é de uma região específica.
-    console.log("CEP localizado:", data);
-  });
-  
+    console.log('CEP localizado:', data)
+  })
+
+  void fetchCep
+  void formatCep
+  void loadingCep
+  void cepError
+
   const unitOptions = useMemo(
     () => units.map((unit) => ({ id: unit.id, label: unit.nome, hint: [unit.cidade, unit.estado].filter(Boolean).join(' • ') })),
     [units]
@@ -72,7 +73,7 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card modal-card-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card modal-card-xl modal-card-user-create" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <h2>Novo usuário</h2>
@@ -81,7 +82,18 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
           <button onClick={onClose} className="modal-close-btn">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-form">
+        <form onSubmit={handleSubmit} className="modal-form modal-form-user-create">
+          <div className="modal-section">
+            <h3>Unidades associadas</h3>
+            <MultiSelectDropdown
+              label="Selecionar unidades"
+              options={unitOptions}
+              selected={formData.unit_ids}
+              onChange={(next) => handleChange('unit_ids', next)}
+              placeholder="Clique para selecionar múltiplas unidades"
+            />
+          </div>
+
           <div className="modal-section">
             <h3>Dados de acesso</h3>
             <div className="form-grid two-columns">
@@ -148,17 +160,6 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
                 </div>
               </label>
             </div>
-          </div>
-
-          <div className="modal-section">
-            <h3>Unidades associadas</h3>
-            <MultiSelectDropdown
-              label="Selecionar unidades"
-              options={unitOptions}
-              selected={formData.unit_ids}
-              onChange={(next) => handleChange('unit_ids', next)}
-              placeholder="Clique para selecionar múltiplas unidades"
-            />
           </div>
 
           {error ? <div className="form-error">{error}</div> : null}

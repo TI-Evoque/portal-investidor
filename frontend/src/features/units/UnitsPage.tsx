@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Download, FilePenLine, FolderUp, PencilLine, Search, Trash2 } from 'lucide-react'
 import api from '../../lib/api'
 import { getMonthLabel } from '../../lib/months'
+import { DEFAULT_UNIT_IMAGE } from '../../lib/unitPhoto'
 import { PortalFile, Unit, User } from '../../types'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { UnitFormModal } from '../../components/modals/UnitFormModal'
@@ -417,7 +418,22 @@ export function UnitsPage() {
         {paginatedUnits.map((unit) => (
           <div className="unit-card unit-card-rich" key={unit.id}>
             <div className="unit-photo">
-              {unit.foto_url ? <AuthenticatedImage src={unit.foto_url} alt={unit.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={'SEM FOTO'} /> : 'SEM FOTO'}
+              {unit.foto_url ? (
+                <AuthenticatedImage
+                  src={unit.foto_url}
+                  alt={unit.nome}
+                  className="unit-photo-image"
+                  fallback={
+                    <div className="unit-photo unit-photo-default-wrap">
+                      <img src={DEFAULT_UNIT_IMAGE} alt="Imagem padrao da unidade" className="unit-photo-image unit-photo-default" />
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="unit-photo unit-photo-default-wrap">
+                  <img src={DEFAULT_UNIT_IMAGE} alt="Imagem padrao da unidade" className="unit-photo-image unit-photo-default" />
+                </div>
+              )}
             </div>
             <div className="unit-info">
               <strong>{unit.nome}</strong>

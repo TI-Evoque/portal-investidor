@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BadgeCheck, KeyRound, Lock, LockOpen, PencilLine, Shield, ShieldOff, Trash2, UsersRound } from 'lucide-react'
+import { BadgeCheck, KeyRound, Lock, LockOpen, PencilLine, Shield, Trash2, UsersRound } from 'lucide-react'
 import api from '../../lib/api'
 import { formatPhone } from '../../lib/phone'
 import { User, Unit } from '../../types'
@@ -8,6 +8,7 @@ import { Pagination } from '../../components/ui/Pagination'
 import { UserEditModal } from '../../components/modals/UserEditModal'
 import { CreateUserPayload, UserCreateModal } from '../../components/modals/UserCreateModal'
 import { UserCreatedModal } from '../../components/modals/UserCreatedModal'
+import { ConfirmActionModal } from '../../components/modals/ConfirmActionModal'
 
 const ITEMS_PER_PAGE = 10
 
@@ -18,14 +19,25 @@ type CreatedUserState = {
   title?: string
 }
 
+type PendingUserAction = {
+  title: string
+  message: string
+  confirmLabel: string
+  tone?: 'default' | 'danger'
+  run: () => Promise<void>
+}
+
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'active' | 'admin'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [editingUser, setEditingUser] = useState<User | undefined>()
   const [isCreatingUser, setIsCreatingUser] = useState(false)
   const [createdUser, setCreatedUser] = useState<CreatedUserState | null>(null)
+  const [pendingAction, setPendingAction] = useState<PendingUserAction | null>(null)
+  const [isConfirmingAction, setIsConfirmingAction] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -36,9 +48,9 @@ export function UsersPage() {
       const payload = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : []
       setUsers(payload)
     } catch (error: any) {
-      console.error('Erro ao carregar usuários', error)
+      console.error('Erro ao carregar usuarios', error)
       setUsers([])
-      setLoadError(error.response?.data?.detail || 'Não foi possível carregar os usuários.')
+      setLoadError(error.response?.data?.detail || 'Nao foi possivel carregar os usuarios.')
     } finally {
       setIsLoading(false)
     }
@@ -57,15 +69,24 @@ export function UsersPage() {
     void Promise.all([loadUsers(), loadUnits()])
   }, [])
 
-  const filteredUsers = useMemo(() => users.filter((user) => {
-    const fullName = `${user.nome} ${user.sobrenome || ''}`.trim()
-    const normalizedSearch = searchTerm.toLowerCase().trim()
-    if (!normalizedSearch) return true
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((user) => {
+        if (summaryFilter === 'active' && !user.is_active) return false
+        if (summaryFilter === 'admin' && user.role !== 'admin') return false
 
-    return fullName.toLowerCase().includes(normalizedSearch) ||
-      user.email.toLowerCase().includes(normalizedSearch) ||
-      (user.telefone || '').toLowerCase().includes(normalizedSearch)
-  }), [users, searchTerm])
+        const fullName = `${user.nome} ${user.sobrenome || ''}`.trim()
+        const normalizedSearch = searchTerm.toLowerCase().trim()
+        if (!normalizedSearch) return true
+
+        return (
+          fullName.toLowerCase().includes(normalizedSearch) ||
+          user.email.toLowerCase().includes(normalizedSearch) ||
+          (user.telefone || '').toLowerCase().includes(normalizedSearch)
+        )
+      }),
+    [users, searchTerm, summaryFilter]
+  )
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE))
@@ -78,7 +99,7 @@ export function UsersPage() {
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const updateUserOnList = (updatedUser: User) => {
-    setUsers((prev) => prev.map((user) => user.id === updatedUser.id ? updatedUser : user))
+    setUsers((prev) => prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)))
   }
 
   const handleSubmitUser = async (data: Partial<User>) => {
@@ -101,14 +122,13 @@ export function UsersPage() {
       email: created.email,
       password: response.data.generated_password,
       mustChangePassword: !!created.must_change_password,
-      title: 'Usuário criado',
+      title: 'Usuario criado',
     })
     setCurrentPage(1)
     await loadUsers()
   }
 
   const handleDeleteUser = async (userId: number) => {
-    if (!window.confirm('Tem certeza que deseja excluir este usuário?')) return
     await api.delete(`/users/${userId}`)
     setUsers((prev) => prev.filter((user) => user.id !== userId))
     await loadUsers()
@@ -128,9 +148,30 @@ export function UsersPage() {
     await loadUsers()
   }
 
+  const summaryItems = [
+    { key: 'all' as const, label: `${users.length} cadastrado(s)` },
+    { key: 'active' as const, label: `${users.filter((user) => user.is_active).length} ativo(s)` },
+    { key: 'admin' as const, label: `${users.filter((user) => user.role === 'admin').length} admin(s)` },
+  ]
+
+  const openActionConfirmation = (action: PendingUserAction) => {
+    setPendingAction(action)
+  }
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return
+    setIsConfirmingAction(true)
+    try {
+      await pendingAction.run()
+      setPendingAction(null)
+    } finally {
+      setIsConfirmingAction(false)
+    }
+  }
+
   return (
     <div className="users-page-wrap">
-      <SectionHeader title="Usuários" action={<button className="outline-soft" onClick={() => setIsCreatingUser(true)}>Novo usuário</button>} />
+      <SectionHeader title="Usuarios" action={<button className="outline-soft" onClick={() => setIsCreatingUser(true)}>Novo usuario</button>} />
 
       <div className="search-bar user-search">
         <input
@@ -145,25 +186,37 @@ export function UsersPage() {
       </div>
 
       <div className="users-summary-bar">
-        <span>{users.length} cadastrado(s)</span>
-        <span>{users.filter((user) => user.is_active).length} ativo(s)</span>
-        <span>{users.filter((user) => user.role === 'admin').length} admin(s)</span>
+        {summaryItems.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`users-summary-chip ${summaryFilter === item.key ? 'active' : ''}`}
+            onClick={() => {
+              setSummaryFilter(item.key)
+              setCurrentPage(1)
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
       <div className="list-stack">
-        {isLoading ? <div className="empty-users-state">Carregando usuários...</div> : null}
+        {isLoading ? <div className="empty-users-state">Carregando usuarios...</div> : null}
         {!isLoading && loadError ? <div className="form-error">{loadError}</div> : null}
         {!isLoading && !loadError && paginatedUsers.length === 0 ? (
-          <div className="empty-users-state">{searchTerm ? 'Nenhum usuário encontrado com esse filtro.' : 'Nenhum usuário cadastrado ainda.'}</div>
+          <div className="empty-users-state">{searchTerm ? 'Nenhum usuario encontrado com esse filtro.' : 'Nenhum usuario cadastrado ainda.'}</div>
         ) : null}
 
         {paginatedUsers.map((user) => {
           const linkedUnits = units.filter((unit) => (user.unit_ids || []).includes(unit.id))
+          const userName = `${user.nome} ${user.sobrenome || ''}`.trim()
+
           return (
             <div className="user-card user-card-rich" key={user.id}>
               <div className="unit-photo user-avatar-badge">{user.nome.slice(0, 1).toUpperCase()}</div>
               <div>
-                <div className="user-name">{user.nome} {user.sobrenome || ''}</div>
+                <div className="user-name">{userName}</div>
                 <div className="user-mail">{user.email}</div>
                 <div className="user-mail">{user.telefone ? formatPhone(user.telefone) : 'Sem telefone cadastrado'}</div>
                 <div className="user-units-inline">
@@ -182,11 +235,68 @@ export function UsersPage() {
               </div>
               <div className="user-actions-grid">
                 <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
-                <button onClick={() => quickPatchUser(user, { role: user.role === 'admin' ? 'investor' : 'admin' }).catch(() => undefined)} className="action-chip icon-action-chip"><Shield size={15} /> {user.role === 'admin' ? 'Remover admin' : 'Dar admin'}</button>
-                <button onClick={() => quickPatchUser(user, { is_authorized: !user.is_authorized }).catch(() => undefined)} className="action-chip icon-action-chip"><BadgeCheck size={15} /> {user.is_authorized ? 'Revogar acesso' : 'Liberar acesso'}</button>
-                <button onClick={() => quickPatchUser(user, { is_active: !user.is_active }).catch(() => undefined)} className="action-chip icon-action-chip">{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
-                <button onClick={() => handleResetPassword(user, true)} className="action-chip icon-action-chip"><KeyRound size={15} /> Resetar senha</button>
-                <button onClick={() => handleDeleteUser(user.id)} className="action-chip danger icon-action-chip"><Trash2 size={15} /> Excluir</button>
+                <button
+                  onClick={() =>
+                    openActionConfirmation({
+                      title: user.role === 'admin' ? 'Remover administrador' : 'Conceder administrador',
+                      message: user.role === 'admin'
+                        ? `Tem certeza que deseja remover o perfil de administrador de ${userName}?`
+                        : `Tem certeza que deseja conceder perfil de administrador para ${userName}?`,
+                      confirmLabel: user.role === 'admin' ? 'Remover admin' : 'Dar admin',
+                      run: async () => { await quickPatchUser(user, { role: user.role === 'admin' ? 'investor' : 'admin' }) },
+                    })
+                  }
+                  className="action-chip icon-action-chip"
+                ><Shield size={15} /> {user.role === 'admin' ? 'Remover admin' : 'Dar admin'}</button>
+                <button
+                  onClick={() =>
+                    openActionConfirmation({
+                      title: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
+                      message: user.is_authorized
+                        ? `Tem certeza que deseja revogar o acesso de ${userName} ao portal?`
+                        : `Tem certeza que deseja liberar o acesso de ${userName} ao portal?`,
+                      confirmLabel: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
+                      run: async () => { await quickPatchUser(user, { is_authorized: !user.is_authorized }) },
+                    })
+                  }
+                  className="action-chip icon-action-chip"
+                ><BadgeCheck size={15} /> {user.is_authorized ? 'Revogar acesso' : 'Liberar acesso'}</button>
+                <button
+                  onClick={() =>
+                    openActionConfirmation({
+                      title: user.is_active ? 'Bloquear usuario' : 'Desbloquear usuario',
+                      message: user.is_active
+                        ? `Tem certeza que deseja bloquear ${userName} e impedir novos acessos?`
+                        : `Tem certeza que deseja desbloquear ${userName} e permitir novo acesso ao sistema?`,
+                      confirmLabel: user.is_active ? 'Bloquear' : 'Desbloquear',
+                      run: async () => { await quickPatchUser(user, { is_active: !user.is_active }) },
+                    })
+                  }
+                  className="action-chip icon-action-chip"
+                >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
+                <button
+                  onClick={() =>
+                    openActionConfirmation({
+                      title: 'Resetar senha',
+                      message: `Tem certeza que deseja gerar uma nova senha temporaria para ${userName}? No proximo login, ele tera que cadastrar uma nova senha.`,
+                      confirmLabel: 'Resetar senha',
+                      run: async () => { await handleResetPassword(user, true) },
+                    })
+                  }
+                  className="action-chip icon-action-chip"
+                ><KeyRound size={15} /> Resetar senha</button>
+                <button
+                  onClick={() =>
+                    openActionConfirmation({
+                      title: 'Excluir usuario',
+                      message: `Tem certeza que deseja excluir ${userName}? Essa acao nao podera ser desfeita.`,
+                      confirmLabel: 'Excluir usuario',
+                      tone: 'danger',
+                      run: async () => { await handleDeleteUser(user.id) },
+                    })
+                  }
+                  className="action-chip danger icon-action-chip"
+                ><Trash2 size={15} /> Excluir</button>
               </div>
             </div>
           )
@@ -196,7 +306,7 @@ export function UsersPage() {
       {filteredUsers.length > 0 ? (
         <>
           <div style={{ textAlign: 'center', fontSize: '13px', color: '#666', marginTop: '16px' }}>
-            Mostrando {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredUsers.length)} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuário(s)
+            Mostrando {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredUsers.length)} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuario(s)
           </div>
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </>
@@ -205,6 +315,20 @@ export function UsersPage() {
       {editingUser ? <UserEditModal user={editingUser} units={units} onClose={() => setEditingUser(undefined)} onSubmit={handleSubmitUser} onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)} /> : null}
       {isCreatingUser ? <UserCreateModal units={units} onClose={() => setIsCreatingUser(false)} onSubmit={handleCreateUser} /> : null}
       {createdUser ? <UserCreatedModal email={createdUser.email} password={createdUser.password} mustChangePassword={createdUser.mustChangePassword} title={createdUser.title} onClose={() => setCreatedUser(null)} /> : null}
+      {pendingAction ? (
+        <ConfirmActionModal
+          title={pendingAction.title}
+          message={pendingAction.message}
+          confirmLabel={pendingAction.confirmLabel}
+          tone={pendingAction.tone}
+          loading={isConfirmingAction}
+          onClose={() => {
+            if (isConfirmingAction) return
+            setPendingAction(null)
+          }}
+          onConfirm={confirmPendingAction}
+        />
+      ) : null}
     </div>
   )
 }
