@@ -198,9 +198,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         forbidden_fields = {'nome', 'sobrenome', 'cpf', 'telefone', 'must_change_password'}
         attempted = forbidden_fields.intersection(data.keys())
         if attempted:
-            raise HTTPException(status_code=403, detail='O admin pode apenas bloquear, liberar acesso ou criar usuarios')
-        if unit_ids is not None:
-            raise HTTPException(status_code=403, detail='O admin nao pode editar unidades vinculadas por esta tela')
+            raise HTTPException(status_code=403, detail='O admin nao pode alterar esses dados cadastrais por esta tela')
 
     for key, value in data.items():
         setattr(user, key, value)
