@@ -26,8 +26,7 @@ export function DashboardPage() {
     <div>
       <div className="hero-banner">
         <div>
-          <h2>Bem-vindo</h2>
-          <p>ao seu portal do investidor</p>
+          <h2>Bem vindo ao portal do investidor</h2>
         </div>
       </div>
 
