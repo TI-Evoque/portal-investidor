@@ -43,20 +43,38 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!isValidCellPhone(formData.telefone)) {
       setError('Informe um celular com DDD no formato (11) 99999-9999.')
       return
     }
+
     if (!isValidCpf(formData.cpf || '')) {
       setError('Informe um CPF valido no formato 000.000.000-00.')
       return
     }
+
     setLoading(true)
     try {
-      await onSubmit(formData)
+      const payload: Partial<User> = { ...formData }
+
+      if (payload.email === user.email) delete payload.email
+      if ((payload.sobrenome || '') === (user.sobrenome || '')) delete payload.sobrenome
+      if ((payload.telefone || '') === (user.telefone || '')) delete payload.telefone
+      if ((payload.cpf || '') === formatCpf(user.cpf || '')) delete payload.cpf
+      if (payload.is_authorized === user.is_authorized) delete payload.is_authorized
+      if (payload.is_active === user.is_active) delete payload.is_active
+      if (payload.must_change_password === user.must_change_password) delete payload.must_change_password
+      if (payload.role === user.role) delete payload.role
+
+      const currentUnitIds = JSON.stringify([...(user.unit_ids || [])].sort((a, b) => a - b))
+      const nextUnitIds = JSON.stringify([...(payload.unit_ids || [])].sort((a, b) => a - b))
+      if (currentUnitIds === nextUnitIds) delete payload.unit_ids
+
+      await onSubmit(payload)
       onClose()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Erro ao atualizar usuário')
+      setError(err.response?.data?.detail || 'Erro ao atualizar usuario')
     } finally {
       setLoading(false)
     }
@@ -87,19 +105,19 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
           <button onClick={onClose} className="modal-close-btn">×</button>
         </div>
 
-        <div className="modal-tabs" role="tablist" aria-label="Editar usuário">
+        <div className="modal-tabs" role="tablist" aria-label="Editar usuario">
           <button type="button" className={tabClassName('dados')} onClick={() => setActiveTab('dados')}>Dados</button>
-          <button type="button" className={tabClassName('permissoes')} onClick={() => setActiveTab('permissoes')}>Permissões</button>
+          <button type="button" className={tabClassName('permissoes')} onClick={() => setActiveTab('permissoes')}>Permissoes</button>
           <button type="button" className={tabClassName('unidades')} onClick={() => setActiveTab('unidades')}>Unidades</button>
-          <button type="button" className={tabClassName('seguranca')} onClick={() => setActiveTab('seguranca')}>Segurança</button>
+          <button type="button" className={tabClassName('seguranca')} onClick={() => setActiveTab('seguranca')}>Seguranca</button>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form modal-form-spacious">
-          {activeTab === 'dados' && (
+          {activeTab === 'dados' ? (
             <div className="modal-section modal-tab-panel">
               <div className="modal-panel-intro">
-                <h3>Informações do usuário</h3>
-                <p className="modal-subtitle">Edite apenas os campos cadastrais necessários.</p>
+                <h3>Informacoes do usuario</h3>
+                <p className="modal-subtitle">Edite apenas os campos cadastrais necessarios.</p>
               </div>
               <div className="form-grid two-columns">
                 <div className="form-group">
@@ -143,18 +161,18 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {activeTab === 'permissoes' && (
+          {activeTab === 'permissoes' ? (
             <div className="modal-section modal-tab-panel">
               <div className="modal-panel-intro">
-                <h3>Permissões e status</h3>
-                <p className="modal-subtitle">Controle acesso, perfil administrativo e disponibilidade do usuário.</p>
+                <h3>Permissoes e status</h3>
+                <p className="modal-subtitle">Controle acesso, perfil administrativo e disponibilidade do usuario.</p>
               </div>
               <div className="toggle-grid">
                 <label className="setting-toggle setting-toggle-rich">
                   <input type="checkbox" checked={formData.is_active || false} onChange={(e) => handleChange('is_active', e.target.checked)} disabled={loading} />
-                  <div><strong>Usuário ativo</strong><span>Permite login e navegação no portal.</span></div>
+                  <div><strong>Usuario ativo</strong><span>Permite login e navegacao no portal.</span></div>
                 </label>
                 <label className="setting-toggle setting-toggle-rich">
                   <input type="checkbox" checked={formData.is_authorized || false} onChange={(e) => handleChange('is_authorized', e.target.checked)} disabled={loading} />
@@ -163,59 +181,63 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
                 {user.role === 'super_admin' ? (
                   <label className="setting-toggle setting-toggle-rich">
                     <input type="checkbox" checked disabled />
-                    <div><strong>Super admin</strong><span>Esse usuário possui o nível máximo de permissão.</span></div>
+                    <div><strong>Super admin</strong><span>Esse usuario possui o nivel maximo de permissao.</span></div>
                   </label>
                 ) : (
                   <label className="setting-toggle setting-toggle-rich">
                     <input type="checkbox" checked={formData.role === 'admin'} onChange={(e) => handleChange('role', e.target.checked ? 'admin' : 'investor')} disabled={loading} />
-                    <div><strong>Administrador</strong><span>Concede permissões administrativas completas.</span></div>
+                    <div><strong>Administrador</strong><span>Concede permissoes administrativas completas.</span></div>
                   </label>
                 )}
                 <label className="setting-toggle setting-toggle-rich">
                   <input type="checkbox" checked={formData.must_change_password || false} onChange={(e) => handleChange('must_change_password', e.target.checked)} disabled={loading || resetLoading} />
-                  <div><strong>Trocar senha no próximo login</strong><span>Usado também no reset de senha abaixo.</span></div>
+                  <div><strong>Trocar senha no proximo login</strong><span>Usado tambem no reset de senha abaixo.</span></div>
                 </label>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {activeTab === 'unidades' && (
+          {activeTab === 'unidades' ? (
             <div className="modal-section modal-tab-panel">
               <div className="modal-panel-intro">
-                <h3>Unidades de sócio investidor</h3>
-                <p className="modal-subtitle">Adicione ou remova as unidades vinculadas ao usuário.</p>
+                <h3>Unidades de socio investidor</h3>
+                <p className="modal-subtitle">Adicione ou remova as unidades vinculadas ao usuario.</p>
               </div>
               <MultiSelectDropdown
                 label="Selecionar unidades"
                 options={unitOptions}
                 selected={formData.unit_ids || []}
                 onChange={(next) => handleChange('unit_ids', next)}
-                placeholder="Clique para selecionar múltiplas unidades"
+                placeholder="Clique para selecionar multiplas unidades"
               />
             </div>
-          )}
+          ) : null}
 
-          {activeTab === 'seguranca' && (
+          {activeTab === 'seguranca' ? (
             <div className="modal-section modal-tab-panel">
               <div className="modal-panel-intro">
                 <h3>Reset de senha</h3>
-                <p className="modal-subtitle">Gera uma nova senha temporária de 6 caracteres e obriga a troca da senha no próximo login.</p>
+                <p className="modal-subtitle">Gera uma nova senha temporaria de 6 caracteres e obriga a troca da senha no proximo login.</p>
               </div>
               <div className="security-panel-card">
                 <div>
-                  <strong>Resetar senha do usuário</strong>
-                  <p className="modal-subtitle">Ao confirmar, o usuário receberá uma senha temporária e será levado primeiro para a tela de nova senha antes de entrar no portal.</p>
+                  <strong>Resetar senha do usuario</strong>
+                  <p className="modal-subtitle">Ao confirmar, o usuario recebera uma senha temporaria e sera levado primeiro para a tela de nova senha antes de entrar no portal.</p>
                 </div>
-                <button type="button" className="btn-secondary" onClick={handleResetPassword} disabled={resetLoading}>{resetLoading ? 'Resetando...' : 'Resetar senha'}</button>
+                <button type="button" className="btn-secondary" onClick={handleResetPassword} disabled={resetLoading}>
+                  {resetLoading ? 'Resetando...' : 'Resetar senha'}
+                </button>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {error && <div className="form-error">{error}</div>}
+          {error ? <div className="form-error">{error}</div> : null}
 
           <div className="modal-actions modal-actions-sticky">
             <button type="button" onClick={onClose} className="btn-secondary" disabled={loading || resetLoading}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={loading || resetLoading}>{loading ? 'Salvando...' : 'Salvar alterações'}</button>
+            <button type="submit" className="btn-primary" disabled={loading || resetLoading}>
+              {loading ? 'Salvando...' : 'Salvar alteracoes'}
+            </button>
           </div>
         </form>
       </div>
