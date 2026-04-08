@@ -334,7 +334,7 @@ export function UsersPage() {
         </>
       ) : null}
 
-      {editingUser ? <UserEditModal user={editingUser} units={units} onClose={() => setEditingUser(undefined)} onSubmit={handleSubmitUser} onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)} /> : null}
+      {editingUser ? <UserEditModal user={editingUser} units={units} currentUserRole={currentUser?.role} onClose={() => setEditingUser(undefined)} onSubmit={handleSubmitUser} onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)} /> : null}
       {isCreatingUser ? <UserCreateModal units={units} onClose={() => setIsCreatingUser(false)} onSubmit={handleCreateUser} /> : null}
       {createdUser ? <UserCreatedModal email={createdUser.email} password={createdUser.password} mustChangePassword={createdUser.mustChangePassword} title={createdUser.title} onClose={() => setCreatedUser(null)} /> : null}
       {pendingAction ? (

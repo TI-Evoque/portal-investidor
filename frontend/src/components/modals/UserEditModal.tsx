@@ -9,12 +9,13 @@ type EditTab = 'dados' | 'permissoes' | 'unidades' | 'seguranca'
 interface UserEditModalProps {
   user: User
   units: Unit[]
+  currentUserRole?: 'super_admin' | 'admin' | 'investor'
   onClose: () => void
   onSubmit: (data: Partial<User>) => Promise<void>
   onResetPassword: (mustChangePassword: boolean) => Promise<void>
 }
 
-export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
+export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
   const [activeTab, setActiveTab] = useState<EditTab>('dados')
   const [formData, setFormData] = useState<Partial<User>>({
     email: user.email,
@@ -30,6 +31,7 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [error, setError] = useState('')
+  const isSuperAdmin = currentUserRole === 'super_admin'
 
   const unitOptions = useMemo(
     () => units.map((unit) => ({ id: unit.id, label: unit.nome, hint: [unit.cidade, unit.estado].filter(Boolean).join(' • ') })),
@@ -70,6 +72,13 @@ export function UserEditModal({ user, units, onClose, onSubmit, onResetPassword 
       const currentUnitIds = JSON.stringify([...(user.unit_ids || [])].sort((a, b) => a - b))
       const nextUnitIds = JSON.stringify([...(payload.unit_ids || [])].sort((a, b) => a - b))
       if (currentUnitIds === nextUnitIds) delete payload.unit_ids
+
+      if (!isSuperAdmin) {
+        delete payload.role
+        delete payload.sobrenome
+        delete payload.cpf
+        delete payload.must_change_password
+      }
 
       await onSubmit(payload)
       onClose()

@@ -195,7 +195,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         data['cpf'] = normalized_cpf
 
     if not is_super_admin(current_admin):
-        forbidden_fields = {'nome', 'sobrenome', 'cpf', 'telefone', 'must_change_password'}
+        forbidden_fields = {'nome', 'sobrenome', 'cpf', 'must_change_password'}
         attempted = forbidden_fields.intersection(data.keys())
         if attempted:
             raise HTTPException(status_code=403, detail='O admin nao pode alterar esses dados cadastrais por esta tela')
