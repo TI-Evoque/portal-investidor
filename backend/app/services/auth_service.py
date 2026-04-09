@@ -12,6 +12,7 @@ from app.utils.validators import normalize_cpf, validate_password_strength
 
 
 PASSWORD_CHARS = string.ascii_letters + string.digits
+INVESTOR_TEMP_PASSWORD = ' '
 
 
 def generate_temporary_password(length: int = 6) -> str:
@@ -45,6 +46,7 @@ def register_user(db: Session, *, nome: str, cpf: str, email: str, password: str
         is_active=True,
         is_authorized=False,
         must_change_password=False,
+        temp_password_pending=False,
     )
     db.add(user)
     db.commit()
@@ -108,6 +110,7 @@ def change_user_password(db: Session, *, user: User, current_password: str, new_
     validate_password_strength(new_password)
     user.password_hash = get_password_hash(new_password)
     user.must_change_password = False
+    user.temp_password_pending = False
     db.commit()
     db.refresh(user)
 
@@ -195,6 +198,7 @@ def reset_password_with_code(db: Session, *, email_or_cpf: str, code: str, new_p
 
     user.password_hash = get_password_hash(new_password)
     user.must_change_password = False
+    user.temp_password_pending = False
     reset_code.used_at = now
     db.commit()
     return {'message': 'Senha redefinida com sucesso'}

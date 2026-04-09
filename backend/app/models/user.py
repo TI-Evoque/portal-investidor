@@ -18,6 +18,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_authorized: Mapped[bool] = mapped_column(Boolean, default=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    temp_password_pending: Mapped[bool] = mapped_column(Boolean, default=False)
     force_logout_pending: Mapped[bool] = mapped_column(Boolean, default=False)
     admin_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

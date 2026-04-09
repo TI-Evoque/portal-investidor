@@ -16,6 +16,8 @@ export function UserCreatedModal({
   title = 'Usuario criado',
 }: UserCreatedModalProps) {
   const [copiedField, setCopiedField] = useState<'email' | 'password' | ''>('')
+  const isSpacePassword = password === ' '
+  const passwordLabel = isSpacePassword ? 'Use somente a tecla espaco' : password
 
   const copyValue = async (value: string, field: 'email' | 'password') => {
     try {
@@ -45,7 +47,7 @@ export function UserCreatedModal({
 
           <div className="credential-box credential-box-password">
             <strong>Senha temporaria</strong>
-            <span>{password}</span>
+            <span>{passwordLabel}</span>
             <button type="button" className="btn-secondary credential-copy-btn" onClick={() => void copyValue(password, 'password')}>
               {copiedField === 'password' ? 'Copiada' : 'Copiar senha'}
             </button>
@@ -53,7 +55,9 @@ export function UserCreatedModal({
 
           <div className="info-box">
             {mustChangePassword
-              ? 'No proximo login o sistema vai exigir a troca da senha.'
+              ? isSpacePassword
+                ? 'No primeiro login, o investidor deve digitar apenas a tecla espaco e depois redefinir a senha.'
+                : 'No proximo login o sistema vai exigir a troca da senha.'
               : 'A troca de senha no primeiro login ficou desmarcada para este usuario.'}
           </div>
         </div>

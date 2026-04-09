@@ -9,6 +9,8 @@ from app.models.unit import Unit  # noqa: F401
 from app.models.user_unit import UserUnit  # noqa: F401
 from app.models.file import File, FileUnit  # noqa: F401
 from app.models.password_reset_code import PasswordResetCode  # noqa: F401
+from app.core.security import get_password_hash
+from app.services.auth_service import INVESTOR_TEMP_PASSWORD
 
 
 def init_db() -> None:
@@ -35,9 +37,26 @@ def init_db() -> None:
     if 'users' in existing_tables and 'admin_message' not in user_columns:
         with engine.begin() as connection:
             connection.execute(text('ALTER TABLE users ADD COLUMN admin_message VARCHAR(1000) NULL'))
+    added_temp_password_pending = False
+    if 'users' in existing_tables and 'temp_password_pending' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text('ALTER TABLE users ADD COLUMN temp_password_pending BOOLEAN NOT NULL DEFAULT 0'))
+        added_temp_password_pending = True
 
     db = SessionLocal()
     try:
+        if added_temp_password_pending:
+            investor_password_hash = get_password_hash(INVESTOR_TEMP_PASSWORD)
+            db.query(User).filter(User.role == 'investor').update(
+                {
+                    'password_hash': investor_password_hash,
+                    'must_change_password': True,
+                    'temp_password_pending': True,
+                },
+                synchronize_session=False,
+            )
+            db.commit()
+
         has_super_admin = db.query(User).filter(User.role == 'super_admin').first()
         if not has_super_admin:
             db.query(User).filter(User.role == 'admin').update({'role': 'super_admin'}, synchronize_session=False)

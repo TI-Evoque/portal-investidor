@@ -9,7 +9,7 @@ from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUpdateRequest
-from app.services.auth_service import generate_temporary_password
+from app.services.auth_service import INVESTOR_TEMP_PASSWORD, generate_temporary_password
 from app.services.email_service import send_password_changed_email
 from app.services.user_service import ONLINE_WINDOW, get_unit_ids_map, serialize_user, sync_user_units
 from app.utils.validators import normalize_cpf
@@ -117,7 +117,8 @@ def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), 
     if existing:
         raise HTTPException(status_code=409, detail='Ja existe um usuario com esse e-mail ou CPF')
 
-    generated_password = generate_temporary_password(6)
+    is_investor = requested_role == 'investor'
+    generated_password = INVESTOR_TEMP_PASSWORD if is_investor else generate_temporary_password(6)
     user = User(
         nome=nome,
         sobrenome=sobrenome or None,
@@ -128,7 +129,8 @@ def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), 
         role=requested_role,
         is_active=True,
         is_authorized=bool(payload.is_authorized),
-        must_change_password=bool(payload.must_change_password),
+        must_change_password=True if is_investor else bool(payload.must_change_password),
+        temp_password_pending=is_investor,
     )
 
     try:
@@ -232,9 +234,10 @@ def reset_user_password(
     if user.id == current_admin.id:
         raise HTTPException(status_code=400, detail='Voce nao pode resetar a propria senha por esta tela')
 
-    generated_password = generate_temporary_password(6)
+    generated_password = INVESTOR_TEMP_PASSWORD if user.role == 'investor' else generate_temporary_password(6)
     user.password_hash = get_password_hash(generated_password)
-    user.must_change_password = bool(force_change_on_first_access)
+    user.must_change_password = True if user.role == 'investor' else bool(force_change_on_first_access)
+    user.temp_password_pending = user.role == 'investor'
     try:
         db.commit()
     except SQLAlchemyError as exc:

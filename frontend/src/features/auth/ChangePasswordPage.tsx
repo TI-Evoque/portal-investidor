@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../../contexts/AuthContext'
 
+function translateValidationMessage(message: string) {
+  return message
+    .replace('String should have at least 6 characters', 'A senha temporaria deve aceitar pelo menos 1 caractere.')
+    .replace('String should have at least 1 character', 'Informe a senha temporaria, mesmo que seja apenas a tecla espaco.')
+    .replace('String should have at least 8 characters', 'A nova senha deve ter pelo menos 8 caracteres.')
+    .replace('String should have at most 64 characters', 'O valor informado excede o tamanho maximo permitido.')
+}
+
 export function ChangePasswordPage() {
   const navigate = useNavigate()
   const { user, isLoading, changePassword, logout } = useAuth()
@@ -43,9 +51,9 @@ export function ChangePasswordPage() {
       if (axios.isAxiosError(err)) {
         const detail = err.response?.data?.detail
         if (Array.isArray(detail)) {
-          setError(detail.map((item: any) => String(item.msg)).join(', '))
+          setError(detail.map((item: any) => translateValidationMessage(String(item.msg))).join(', '))
         } else if (typeof detail === 'string') {
-          setError(detail)
+          setError(translateValidationMessage(detail))
         } else {
           setError('Nao foi possivel trocar a senha agora.')
         }
@@ -92,6 +100,8 @@ export function ChangePasswordPage() {
               />
             </label>
 
+            <div className="password-hint">Se sua senha temporaria for padrao de investidor, pressione apenas a tecla espaco uma vez.</div>
+
             <label className="auth-field">
               <span>Nova senha</span>
               <input
@@ -114,7 +124,7 @@ export function ChangePasswordPage() {
               />
             </label>
 
-            <div className="password-hint">A senha deve ter 8+ caracteres, maiuscula, minuscula, numero e simbolo.</div>
+            <div className="password-hint">A nova senha deve ter 8+ caracteres, maiuscula, minuscula, numero e simbolo.</div>
             {error ? <div className="error-box">{error}</div> : null}
             {message ? <div className="info-box">{message}</div> : null}
 

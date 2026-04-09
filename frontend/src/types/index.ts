@@ -13,6 +13,8 @@ export type User = {
   must_change_password?: boolean
   last_seen_at?: string | null
   is_online?: boolean
+  created_at?: string
+  updated_at?: string | null
   unit_ids: number[]
 }
 export type PortalFile = { id: number; titulo: string; nome_arquivo: string; tipo_arquivo: string; mes_referencia: string; ano_referencia: number; unit_ids: number[]; unit_names: string[]; created_at?: string }

@@ -95,7 +95,7 @@ export function UsersPage() {
           (user.telefone || '').toLowerCase().includes(normalizedSearch)
         )
       }),
-    [visibleUsers, searchTerm, summaryFilter]
+    [visibleUsers, summaryFilter, searchTerm]
   )
 
   useEffect(() => {
@@ -194,7 +194,7 @@ export function UsersPage() {
             setCurrentPage(1)
           }}
         />
-        <button type="button">⌕</button>
+        <button type="button" aria-label="Buscar usuarios">⌕</button>
       </div>
 
       <div className="users-summary-bar">
@@ -217,7 +217,9 @@ export function UsersPage() {
         {isLoading ? <div className="empty-users-state">Carregando usuarios...</div> : null}
         {!isLoading && loadError ? <div className="form-error">{loadError}</div> : null}
         {!isLoading && !loadError && paginatedUsers.length === 0 ? (
-          <div className="empty-users-state">{searchTerm ? 'Nenhum usuario encontrado com esse filtro.' : 'Nenhum usuario cadastrado ainda.'}</div>
+          <div className="empty-users-state">
+            {searchTerm ? 'Nenhum usuario encontrado com esse filtro.' : 'Nenhum usuario cadastrado ainda.'}
+          </div>
         ) : null}
 
         {paginatedUsers.map((user) => {
@@ -248,7 +250,7 @@ export function UsersPage() {
                 <div className={`pill-status ${user.must_change_password ? 'warn' : 'ok'}`}>{user.must_change_password ? 'Troca de senha pendente' : 'Senha regular'}</div>
               </div>
               <div className="user-actions-grid">
-                {currentUser?.role === 'admin' || isSuperAdmin ? (
+                {(currentUser?.role === 'admin' || isSuperAdmin) ? (
                   <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
                 ) : null}
                 {isSuperAdmin && user.role !== 'super_admin' ? (
@@ -292,7 +294,7 @@ export function UsersPage() {
                   }
                   className="action-chip icon-action-chip"
                 >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
-                {currentUser?.role === 'admin' || isSuperAdmin ? (
+                {(currentUser?.role === 'admin' || isSuperAdmin) ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({
@@ -334,7 +336,16 @@ export function UsersPage() {
         </>
       ) : null}
 
-      {editingUser ? <UserEditModal user={editingUser} units={units} currentUserRole={currentUser?.role} onClose={() => setEditingUser(undefined)} onSubmit={handleSubmitUser} onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)} /> : null}
+      {editingUser ? (
+        <UserEditModal
+          user={editingUser}
+          units={units}
+          currentUserRole={currentUser?.role}
+          onClose={() => setEditingUser(undefined)}
+          onSubmit={handleSubmitUser}
+          onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)}
+        />
+      ) : null}
       {isCreatingUser ? <UserCreateModal units={units} onClose={() => setIsCreatingUser(false)} onSubmit={handleCreateUser} /> : null}
       {createdUser ? <UserCreatedModal email={createdUser.email} password={createdUser.password} mustChangePassword={createdUser.mustChangePassword} title={createdUser.title} onClose={() => setCreatedUser(null)} /> : null}
       {pendingAction ? (
