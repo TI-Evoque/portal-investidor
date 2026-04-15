@@ -3,6 +3,7 @@ import { BarChart3, ShieldAlert, Users } from 'lucide-react'
 import axios from 'axios'
 
 import { MultiSelectDropdown } from '../../components/ui/MultiSelectDropdown'
+import { Pagination } from '../../components/ui/Pagination'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
@@ -26,12 +27,14 @@ const emptyAnalytics: DashboardAnalytics = {
 }
 
 const numberFormatter = new Intl.NumberFormat('pt-BR')
+const DASHBOARD_ROWS_PER_PAGE = 25
 
 export function DashboardPage() {
   const { user } = useAuth()
   const [analytics, setAnalytics] = useState<DashboardAnalytics>(emptyAnalytics)
   const [loadError, setLoadError] = useState('')
   const [selectedUnitIds, setSelectedUnitIds] = useState<number[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
 
   const isStaff = user?.role === 'admin' || user?.role === 'super_admin'
   const selectedUnitsLabel = useMemo(() => {
@@ -41,6 +44,12 @@ export function DashboardPage() {
     if (analytics.available_units.length === 0) return 'Nenhuma unidade vinculada'
     return analytics.available_units.map((item) => item.label).join(', ')
   }, [analytics.available_units, isStaff, selectedUnitIds.length])
+
+  const totalUnitPages = Math.max(1, Math.ceil(analytics.unit_grid.length / DASHBOARD_ROWS_PER_PAGE))
+  const paginatedUnitRows = analytics.unit_grid.slice(
+    (currentPage - 1) * DASHBOARD_ROWS_PER_PAGE,
+    currentPage * DASHBOARD_ROWS_PER_PAGE,
+  )
 
   useEffect(() => {
     const params = isStaff && selectedUnitIds.length > 0 ? { unit_ids: selectedUnitIds.join(',') } : undefined
@@ -70,6 +79,16 @@ export function DashboardPage() {
         setLoadError('Nao foi possivel carregar os dados reais do dashboard.')
       })
   }, [isStaff, selectedUnitIds])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedUnitIds])
+
+  useEffect(() => {
+    if (currentPage > totalUnitPages) {
+      setCurrentPage(totalUnitPages)
+    }
+  }, [currentPage, totalUnitPages])
 
   return (
     <div className="dashboard-page">
@@ -161,7 +180,7 @@ export function DashboardPage() {
                   <td colSpan={5} className="dashboard-table-empty">Nenhuma unidade encontrada para o filtro atual.</td>
                 </tr>
               ) : (
-                analytics.unit_grid.map((row) => (
+                paginatedUnitRows.map((row) => (
                   <tr key={row.unit_id}>
                     <td>{row.unit_name}</td>
                     <td>{numberFormatter.format(row.ativos)}</td>
@@ -173,6 +192,14 @@ export function DashboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="dashboard-pagination-footer">
+          <span>
+            Mostrando {analytics.unit_grid.length === 0 ? 0 : (currentPage - 1) * DASHBOARD_ROWS_PER_PAGE + 1}
+            {' '}a {Math.min(currentPage * DASHBOARD_ROWS_PER_PAGE, analytics.unit_grid.length)}
+            {' '}de {analytics.unit_grid.length} unidade(s)
+          </span>
+          <Pagination currentPage={currentPage} totalPages={totalUnitPages} onPageChange={setCurrentPage} />
         </div>
       </section>
     </div>

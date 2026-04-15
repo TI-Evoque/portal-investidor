@@ -9,7 +9,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
     const pages = []
     const maxPagesToShow = 5
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2))
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1)
+    const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1)
 
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1)
@@ -20,8 +20,8 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       if (startPage > 2) pages.push('...')
     }
 
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i)
+    for (let page = startPage; page <= endPage; page += 1) {
+      pages.push(page)
     }
 
     if (endPage < totalPages) {
@@ -37,11 +37,12 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   return (
     <div className="pagination-container">
       <button
+        type="button"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="pagination-btn"
       >
-        ← Anterior
+        Anterior
       </button>
 
       <div className="pagination-numbers">
@@ -52,6 +53,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             </span>
           ) : (
             <button
+              type="button"
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`pagination-number ${currentPage === page ? 'active' : ''}`}
@@ -63,11 +65,12 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       </div>
 
       <button
+        type="button"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="pagination-btn"
       >
-        Próxima →
+        Avancar
       </button>
     </div>
   )

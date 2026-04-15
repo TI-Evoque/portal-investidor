@@ -70,8 +70,8 @@ button, input { font: inherit; }
   }
 }
 
-.portal-layout { display: grid; grid-template-columns: 184px 1fr; min-height: 100vh; }
-.sidebar { background: var(--orange); color: white; padding: 18px 14px; display: flex; flex-direction: column; gap: 18px; }
+.portal-layout { display: grid; grid-template-columns: 184px 1fr; min-height: 100vh; background: #f6f6f6; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--orange); color: white; padding: 18px 14px; display: flex; flex-direction: column; gap: 18px; }
 .brand-block { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; text-align: center; }
 .brand-mark { width: 56px; height: 56px; object-fit: contain; background: transparent; display: block; }
 .brand-name { font-weight: 800; font-size: 13px; letter-spacing: 0.9px; line-height: 1.2; text-align: center; max-width: 110px; }
@@ -83,7 +83,7 @@ button, input { font: inherit; }
 .dark-pill, .outline-pill { margin-top: auto; border-radius: 22px; padding: 14px 18px; border: none; font-weight: 700; cursor: pointer; }
 .dark-pill { background: #2d2d2d; color: white; }
 .outline-pill { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.85); margin-top: 8px; }
-.main-content { padding: 20px 30px; }
+.main-content { min-width: 0; min-height: 100vh; padding: 20px 30px; background: #f6f6f6; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .avatar-wrap { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 38px; height: 38px; border-radius: 50%; background: #d9d9d9; display: grid; place-items: center; font-size: 11px; }
@@ -2307,6 +2307,20 @@ button, input { font: inherit; }
   color: #777;
 }
 
+.dashboard-pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding-top: 18px;
+  color: #666;
+  font-size: 13px;
+}
+
+.dashboard-pagination-footer .pagination-container {
+  margin: 0;
+}
+
 .dashboard-kpi-card {
   padding: 18px;
   border-radius: 18px;
@@ -2356,6 +2370,7 @@ button, input { font: inherit; }
 
   .sidebar {
     position: static;
+    height: auto;
     flex-direction: row;
     align-items: center;
     gap: 14px;
@@ -2425,6 +2440,7 @@ button, input { font: inherit; }
   .sidebar {
     position: sticky;
     top: 0;
+    height: auto;
     z-index: 1200;
     display: grid;
     grid-template-columns: 1fr auto;
