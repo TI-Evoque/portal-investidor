@@ -8,7 +8,7 @@ from app.api.deps.auth import is_super_admin, require_admin, require_super_admin
 from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUpdateRequest
+from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUnitsUpdateRequest, UserUpdateRequest
 from app.services.auth_service import INVESTOR_TEMP_PASSWORD, generate_temporary_password
 from app.services.email_service import send_password_changed_email
 from app.services.user_service import ONLINE_WINDOW, get_unit_ids_map, serialize_user, sync_user_units
@@ -212,6 +212,31 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail=f'Erro ao atualizar usuario: {exc}')
+
+    db.refresh(user)
+    unit_map = get_unit_ids_map(db, [user.id])
+    return serialize_user(user, unit_map.get(user.id, []))
+
+
+@router.patch('/{user_id}/units', response_model=UserOut)
+def update_user_units(
+    user_id: int,
+    payload: UserUnitsUpdateRequest,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Usuario nao encontrado')
+
+    _ensure_manageable_user(current_admin, user)
+
+    try:
+        sync_user_units(db, user, payload.unit_ids)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f'Erro ao atualizar unidades do usuario: {exc}')
 
     db.refresh(user)
     unit_map = get_unit_ids_map(db, [user.id])

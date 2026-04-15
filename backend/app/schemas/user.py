@@ -35,6 +35,10 @@ class UserUpdateRequest(BaseModel):
     unit_ids: list[int] | None = None
 
 
+class UserUnitsUpdateRequest(BaseModel):
+    unit_ids: list[int] = Field(default_factory=list)
+
+
 class AdminMessageRequest(BaseModel):
     message: str = Field(min_length=3, max_length=1000)
 

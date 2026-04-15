@@ -113,7 +113,10 @@ export function UsersPage() {
   }
 
   const handleSubmitUser = async (data: Partial<User>) => {
-    const response = await api.patch(`/users/${editingUser!.id}`, data)
+    const changedFields = Object.keys(data)
+    const response = changedFields.length === 1 && changedFields[0] === 'unit_ids'
+      ? await api.patch(`/users/${editingUser!.id}/units`, { unit_ids: data.unit_ids || [] })
+      : await api.patch(`/users/${editingUser!.id}`, data)
     updateUserOnList(response.data)
     await loadUsers()
   }
