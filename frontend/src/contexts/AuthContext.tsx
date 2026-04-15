@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AdminNoticeModal } from '../components/modals/AdminNoticeModal'
+import { InvestorWelcomeModal } from '../components/modals/InvestorWelcomeModal'
 import api from '../lib/api'
 
 export interface User {
@@ -30,12 +31,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000
 const HEARTBEAT_INTERVAL_MS = 60 * 1000
+const INVESTOR_FEATURES_NOTICE_VERSION = 'v1'
 const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click']
+
+const getInvestorFeaturesNoticeKey = (userId: number) => `portal_investor_features_notice_${INVESTOR_FEATURES_NOTICE_VERSION}_${userId}`
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [adminNotice, setAdminNotice] = useState('')
+  const [showInvestorWelcome, setShowInvestorWelcome] = useState(false)
   const [isAcknowledgingNotice, setIsAcknowledgingNotice] = useState(false)
   const inactivityTimeoutRef = useRef<number | null>(null)
   const heartbeatIntervalRef = useRef<number | null>(null)
@@ -45,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('portal_user')
     setUser(null)
     setAdminNotice('')
+    setShowInvestorWelcome(false)
   }
 
   const clearInactivityTimer = () => {
@@ -120,6 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const acknowledgeInvestorWelcome = () => {
+    if (user) {
+      localStorage.setItem(getInvestorFeaturesNoticeKey(user.id), 'acknowledged')
+    }
+    setShowInvestorWelcome(false)
+  }
+
   useEffect(() => {
     void checkAuth()
   }, [])
@@ -171,6 +184,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearInactivityTimer()
       clearHeartbeatInterval()
     }
+  }, [user])
+
+  useEffect(() => {
+    if (!user || user.role !== 'investor') {
+      setShowInvestorWelcome(false)
+      return
+    }
+
+    setShowInvestorWelcome(localStorage.getItem(getInvestorFeaturesNoticeKey(user.id)) !== 'acknowledged')
   }, [user])
 
   const login = async (email: string, password: string) => {
@@ -248,6 +270,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loading={isAcknowledgingNotice}
           onConfirm={acknowledgeAdminNotice}
         />
+      ) : null}
+      {!adminNotice && showInvestorWelcome && user?.role === 'investor' ? (
+        <InvestorWelcomeModal onConfirm={acknowledgeInvestorWelcome} />
       ) : null}
     </AuthContext.Provider>
   )
