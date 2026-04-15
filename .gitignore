@@ -1,0 +1,72 @@
+# =========================
+# NODE / FRONTEND
+# =========================
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# PYTHON / BACKEND
+# =========================
+_pycache_/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtualenv
+venv/
+.venv/
+env/
+
+# Logs
+*.log
+
+# =========================
+# BUILD / PRODUÇÃO
+# =========================
+dist/
+coverage/
+
+# =========================
+# UPLOADS / ARQUIVOS
+# =========================
+uploads/
+*.pdf
+*.xlsx
+*.csv
+
+# =========================
+# SISTEMA
+# =========================
+*.zip
+*.tar
+*.gz
+
+# =========================
+# CACHE
+# =========================
+.cache/
+.tmp/

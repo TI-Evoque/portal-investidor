@@ -1,0 +1,71 @@
+import { useEffect, useState } from 'react'
+import { Download, FileText } from 'lucide-react'
+import api from '../../lib/api'
+import { getMonthLabel } from '../../lib/months'
+import { Summary, PortalFile } from '../../types'
+import { SectionHeader } from '../../components/ui/SectionHeader'
+import { StatCard } from '../../components/ui/StatCard'
+
+export function HomePage() {
+  const [summary, setSummary] = useState<Summary>({ uploads: 0, units: 0, users: 0 })
+  const [recentFiles, setRecentFiles] = useState<PortalFile[]>([])
+
+  useEffect(() => {
+    void api
+      .get<Summary>('/dashboard/summary')
+      .then((res) => setSummary(res.data))
+      .catch(() => undefined)
+
+    void api
+      .get<PortalFile[]>('/files')
+      .then((res) => setRecentFiles(Array.isArray(res.data) ? res.data.slice(0, 3) : []))
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <div>
+      <div className="hero-banner">
+        <div>
+          <h2>Bem vindo ao portal do investidor</h2>
+        </div>
+      </div>
+
+      <SectionHeader title="Inicio" />
+
+      <div className="stats-grid">
+        <StatCard title="Upload de arquivos" value={summary.uploads} accent="orange" href="/arquivos" />
+        <StatCard title="Unidades Cadastradas" value={summary.units} accent="dark" href="/unidades" />
+        <StatCard title="Usuarios Cadastrados" value={summary.users} accent="orange" href="/usuarios" />
+      </div>
+
+      <div className="table-card">
+        <div className="table-top">
+          <h3>Ultimos arquivos enviados</h3>
+          <a href="/arquivos">Ver todos</a>
+        </div>
+
+        {recentFiles.length === 0 ? (
+          <div className="file-row">
+            <span className="file-icon"><FileText size={18} /></span>
+            <span>Nenhum arquivo recente encontrado.</span>
+            <span>-</span>
+            <span>-</span>
+            <span>-</span>
+            <span>-</span>
+          </div>
+        ) : (
+          recentFiles.map((file) => (
+            <div className="file-row" key={file.id}>
+              <span className="file-icon"><FileText size={18} /></span>
+              <span>{file.titulo}</span>
+              <span>{Array.isArray(file.unit_names) ? file.unit_names.join(', ') : '-'}</span>
+              <span>{file.tipo_arquivo}</span>
+              <span>{getMonthLabel(file.mes_referencia)}</span>
+              <span><Download size={16} /></span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
