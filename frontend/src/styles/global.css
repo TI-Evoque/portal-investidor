@@ -1341,7 +1341,7 @@ button, input { font: inherit; }
   margin: 0;
 }
 .investor-unit-metadata {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 6px;
   color: #666;
@@ -1484,6 +1484,27 @@ button, input { font: inherit; }
   }
 }
 @media (max-width: 640px) {
+  .hero-banner.investor-hero:not(.investor-detail-hero) {
+    min-height: auto;
+    padding: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(255, 128, 49, 0.20), transparent 40%),
+      linear-gradient(135deg, #201612 0%, #ff5a00 100%);
+  }
+
+  .hero-banner.investor-hero:not(.investor-detail-hero) .investor-hero-logo {
+    display: none;
+  }
+
+  .hero-banner.investor-hero:not(.investor-detail-hero) h2 {
+    font-size: clamp(30px, 9vw, 42px);
+  }
+
+  .hero-banner.investor-hero:not(.investor-detail-hero) p {
+    font-size: 19px;
+    line-height: 1.35;
+  }
+
   .investor-filter-grid,
   .investor-unit-grid {
     grid-template-columns: 1fr;
