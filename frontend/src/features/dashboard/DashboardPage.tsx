@@ -21,6 +21,8 @@ const emptyAnalytics: DashboardAnalytics = {
   unit_grid: [],
   available_units: [],
   selected_unit_ids: [],
+  metrics_status: 'ok',
+  metrics_message: '',
 }
 
 const numberFormatter = new Intl.NumberFormat('pt-BR')
@@ -44,13 +46,12 @@ export function DashboardPage() {
     const params = isStaff && selectedUnitIds.length > 0 ? { unit_ids: selectedUnitIds.join(',') } : undefined
 
     void api
-      .get<DashboardAnalytics>('/dashboard/analytics', { timeout: 60000, params })
+      .get<DashboardAnalytics>('/dashboard/analytics', { timeout: 15000, params })
       .then((res) => {
         setAnalytics(res.data)
         setLoadError('')
       })
       .catch((error: unknown) => {
-        setAnalytics(emptyAnalytics)
         if (axios.isAxiosError(error)) {
           const detail = typeof error.response?.data?.detail === 'string' ? error.response?.data?.detail : ''
           if (error.response?.status === 401) {
@@ -104,6 +105,9 @@ export function DashboardPage() {
 
       {loadError ? (
         <div className="error-box dashboard-error-box">{loadError}</div>
+      ) : null}
+      {!loadError && analytics.metrics_status === 'unavailable' && analytics.metrics_message ? (
+        <div className="info-box dashboard-info-box">{analytics.metrics_message}</div>
       ) : null}
 
       <div className="dashboard-overview-grid">

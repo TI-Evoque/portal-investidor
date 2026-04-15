@@ -144,6 +144,9 @@ echo Login padrao do admin:
 echo   E-mail : admin@evoque.com.br
 echo   Senha  : Evoque@2026
 echo.
+echo Observacao: o banco "expansao" e opcional em dev. Se nao estiver configurado,
+echo o backend inicia normalmente e o dashboard usa metricas zeradas dessa integracao.
+echo.
 
 echo [4/4] Iniciando servicos...
 start "Portal Backend" cmd /k "cd /d ""%ROOT%backend"" && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"

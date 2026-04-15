@@ -98,10 +98,13 @@ api.interceptors.response.use(
     const canRetryWithAnotherBaseUrl = (
       method === 'get'
       && currentFallbackIndex < baseUrlCandidates.length - 1
-      && (!error.response || error.response.status === 404 || error.response.status === 502 || error.response.status === 503)
+      && (!error.response || error.response.status === 404)
     )
 
     if (canRetryWithAnotherBaseUrl && requestConfig) {
+      if (requestConfig.headers?.['X-Skip-Global-Loading'] !== 'true') {
+        endApiRequest()
+      }
       requestConfig.__baseUrlFallbackIndex = currentFallbackIndex + 1
       return api.request(requestConfig)
     }

@@ -2149,6 +2149,14 @@ button, input { font: inherit; }
   margin-bottom: 2px;
 }
 
+.dashboard-info-box {
+  margin-top: -6px;
+  margin-bottom: 2px;
+  border-color: #ffd2b6;
+  background: #fff4eb;
+  color: #8c4c17;
+}
+
 .dashboard-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

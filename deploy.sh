@@ -1,9 +1,10 @@
 #!/bin/bash
 set -e
 
-APP_ROOT=/root/portal-investidor-main
+APP_ROOT=${APP_ROOT:-/opt/portal-investidor/portal-investidor}
 BACKEND_DIR=$APP_ROOT/backend
 FRONTEND_DIR=$APP_ROOT/frontend
+SERVER_NAME=${SERVER_NAME:-147.93.70.206}
 
 echo "==> Atualizando pacotes"
 apt update
@@ -19,6 +20,10 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 echo "==> Preparando frontend"
+cat > $FRONTEND_DIR/.env.production <<'EOF'
+VITE_API_URL=/api/v1
+EOF
+
 cd $FRONTEND_DIR
 npm install
 npm run build
@@ -31,23 +36,24 @@ After=network.target
 
 [Service]
 User=root
-WorkingDirectory=/root/portal-investidor-main/backend
-EnvironmentFile=/root/portal-investidor-main/backend/.env
-ExecStart=/root/portal-investidor-main/backend/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+WorkingDirectory=__BACKEND_DIR__
+EnvironmentFile=__BACKEND_DIR__/.env
+ExecStart=__BACKEND_DIR__/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
+sed -i "s#__BACKEND_DIR__#$BACKEND_DIR#g" /etc/systemd/system/portal-backend.service
 
 echo "==> Instalando Nginx"
 cat > /etc/nginx/sites-available/portal-investidor <<'EOF'
 server {
     listen 80;
-    server_name 147.93.70.206;
+    server_name __SERVER_NAME__;
 
-    root /root/portal-investidor-main/frontend/dist;
+    root __FRONTEND_DIR__/dist;
     index index.html;
 
     location / {
@@ -63,17 +69,11 @@ server {
     }
 }
 EOF
+sed -i "s#__SERVER_NAME__#$SERVER_NAME#g" /etc/nginx/sites-available/portal-investidor
+sed -i "s#__FRONTEND_DIR__#$FRONTEND_DIR#g" /etc/nginx/sites-available/portal-investidor
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/portal-investidor /etc/nginx/sites-enabled/portal-investidor
-
-echo "==> Ajustando frontend para proxy Nginx"
-cat > $FRONTEND_DIR/.env.production <<'EOF'
-VITE_API_URL=/api/v1
-EOF
-
-cd $FRONTEND_DIR
-npm run build
 
 echo "==> Subindo servicos"
 systemctl daemon-reload
@@ -85,5 +85,5 @@ systemctl enable nginx
 systemctl restart nginx
 
 echo "==> Deploy concluido"
-echo "Backend: http://147.93.70.206/api/v1/docs"
-echo "Frontend: http://147.93.70.206"
+echo "Backend: http://$SERVER_NAME/api/v1/docs"
+echo "Frontend: http://$SERVER_NAME"

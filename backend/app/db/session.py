@@ -1,7 +1,7 @@
 import ssl
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 
@@ -41,9 +41,10 @@ def get_db():
         db.close()
 
 
-def get_expansao_db():
+def get_expansao_db() -> Session | None:
     if ExpansaoSessionLocal is None:
-        raise RuntimeError('Conexao do banco expansao nao configurada.')
+        yield None
+        return
     db = ExpansaoSessionLocal()
     try:
         yield db

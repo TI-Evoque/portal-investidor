@@ -22,6 +22,8 @@ export type DashboardAnalytics = {
   unit_grid: DashboardGridRow[]
   available_units: DashboardUnitOption[]
   selected_unit_ids: number[]
+  metrics_status: 'ok' | 'unavailable'
+  metrics_message: string
 }
 export type Unit = { id: number; nome: string; endereco: string; cidade: string; estado: string; status_texto: string; foto_url?: string }
 export type User = {

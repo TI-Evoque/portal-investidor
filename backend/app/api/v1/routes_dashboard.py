@@ -15,6 +15,10 @@ from app.models.user_unit import UserUnit
 router = APIRouter(prefix='/dashboard', tags=['dashboard'])
 DASHBOARD_CACHE_TTL = timedelta(seconds=90)
 _dashboard_cache: dict[tuple[int, tuple[int, ...]], tuple[datetime, dict]] = {}
+EXPANSAO_UNAVAILABLE_MESSAGE = (
+    'Os indicadores de ativos, inadimplentes e agregadores nao foram carregados '
+    'porque a conexao com o banco expansao nao esta configurada.'
+)
 
 
 @router.get('/summary')
@@ -29,7 +33,7 @@ def dashboard_summary(db: Session = Depends(get_db), _: object = Depends(require
 @router.get('/analytics')
 def dashboard_analytics(
     db: Session = Depends(get_db),
-    expansao_db: Session = Depends(get_expansao_db),
+    expansao_db: Session | None = Depends(get_expansao_db),
     current_user: User = Depends(require_authorized_user),
     unit_ids: str | None = Query(default=None),
 ):
@@ -60,6 +64,8 @@ def dashboard_analytics(
             'unit_grid': [],
             'available_units': [],
             'selected_unit_ids': [],
+            'metrics_status': 'ok',
+            'metrics_message': '',
         }
 
     if is_staff(current_user):
@@ -79,23 +85,36 @@ def dashboard_analytics(
 
     expanding_ids = bindparam('unit_ids', expanding=True)
 
-    try:
-        ativos_rows = expansao_db.execute(
-            text('SELECT UNIDADE, ATIVOS FROM ativos WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
-            {'unit_ids': selected_unit_ids},
-        ).mappings().all()
+    if expansao_db is None:
+        ativos_rows = []
+        inadimplentes_rows = []
+        agregadores_rows = []
+        metrics_status = 'unavailable'
+        metrics_message = EXPANSAO_UNAVAILABLE_MESSAGE
+    else:
+        metrics_status = 'ok'
+        metrics_message = ''
+        try:
+            ativos_rows = expansao_db.execute(
+                text('SELECT UNIDADE, ATIVOS FROM ativos WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
+                {'unit_ids': selected_unit_ids},
+            ).mappings().all()
 
-        inadimplentes_rows = expansao_db.execute(
-            text('SELECT UNIDADE, INADIMPLENTES FROM inadimplentes WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
-            {'unit_ids': selected_unit_ids},
-        ).mappings().all()
+            inadimplentes_rows = expansao_db.execute(
+                text('SELECT UNIDADE, INADIMPLENTES FROM inadimplentes WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
+                {'unit_ids': selected_unit_ids},
+            ).mappings().all()
 
-        agregadores_rows = expansao_db.execute(
-            text('SELECT UNIDADE, GYMPASS, TOTALPASS FROM agregadores WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
-            {'unit_ids': selected_unit_ids},
-        ).mappings().all()
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f'Falha ao consultar o banco expansao: {exc}') from exc
+            agregadores_rows = expansao_db.execute(
+                text('SELECT UNIDADE, GYMPASS, TOTALPASS FROM agregadores WHERE UNIDADE IN :unit_ids').bindparams(expanding_ids),
+                {'unit_ids': selected_unit_ids},
+            ).mappings().all()
+        except Exception as exc:
+            ativos_rows = []
+            inadimplentes_rows = []
+            agregadores_rows = []
+            metrics_status = 'unavailable'
+            metrics_message = f'As unidades foram carregadas, mas os indicadores do banco expansao nao puderam ser consultados: {exc}'
 
     ativos_map = {int(row['UNIDADE']): int(row['ATIVOS'] or 0) for row in ativos_rows}
     inadimplentes_map = {int(row['UNIDADE']): int(row['INADIMPLENTES'] or 0) for row in inadimplentes_rows}
@@ -154,6 +173,8 @@ def dashboard_analytics(
             for unit in available_units
         ],
         'selected_unit_ids': selected_unit_ids,
+        'metrics_status': metrics_status,
+        'metrics_message': metrics_message,
     }
     _dashboard_cache[cache_key] = (datetime.utcnow(), response)
     return response

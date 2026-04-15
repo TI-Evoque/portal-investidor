@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BASE_DIR / '.env'
 PLACEHOLDER_PASSWORDS = {'troque-aqui', 'sua-senha-aqui', 'changeme', 'change-me'}
+PLACEHOLDER_USERS = {'usuario-com-acesso-expansao', 'seu-usuario', 'user', 'usuario'}
 
 
 class Settings(BaseSettings):
@@ -75,15 +76,18 @@ class Settings(BaseSettings):
 
     def _build_expansao_mysql_url(self) -> str | None:
         host = self.EXPANSAO_DB_HOST.strip() or self.DB_HOST.strip()
-        user_value = self.EXPANSAO_DB_USER.strip() or self.DB_USER.strip()
-        password_value = self.EXPANSAO_DB_PASSWORD
+        configured_user = self.EXPANSAO_DB_USER.strip()
+        user_value = configured_user if configured_user.lower() not in PLACEHOLDER_USERS else self.DB_USER.strip()
+        password_value = self.EXPANSAO_DB_PASSWORD.strip()
+        if password_value.lower() in PLACEHOLDER_PASSWORDS:
+            password_value = self.DB_PASSWORD.strip()
         db_name_value = self.EXPANSAO_DB_NAME.strip()
         port_value = self.EXPANSAO_DB_PORT or self.DB_PORT
 
         if not all([host, user_value, password_value, db_name_value]):
             return None
         if password_value.strip().lower() in PLACEHOLDER_PASSWORDS:
-            raise ValueError('EXPANSAO_DB_PASSWORD ainda esta com valor de exemplo no arquivo .env. Informe a senha real do MySQL/Azure.')
+            return None
 
         user = quote_plus(user_value)
         password = quote_plus(password_value)
