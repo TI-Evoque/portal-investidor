@@ -1,4 +1,5 @@
-import { Building2, FolderOpen, House, LayoutDashboard, LogOut, Radar, Users } from 'lucide-react'
+import { useState } from 'react'
+import { Building2, FolderOpen, House, LayoutDashboard, LogOut, Menu, Radar, X, Users } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import evoqueMark from '../../assets/evoque-mark.svg'
@@ -7,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 export function AppShell() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const adminItems = [
     ['/inicio', 'Inicio', House],
@@ -30,6 +32,7 @@ export function AppShell() {
         : investorItems
 
   const handleLogout = () => {
+    setIsMobileMenuOpen(false)
     logout()
     navigate('/login')
   }
@@ -47,9 +50,24 @@ export function AppShell() {
           <img src={evoqueMark} alt="Logomarca Evoque Academia" className="brand-mark" />
           <div className="brand-name">EVOQUE ACADEMIA</div>
         </div>
-        <nav className="sidebar-nav">
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="portal-mobile-menu"
+          onClick={() => setIsMobileMenuOpen((current) => !current)}
+        >
+          {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          <span>Menu</span>
+        </button>
+        <nav id="portal-mobile-menu" className={`sidebar-nav ${isMobileMenuOpen ? 'open' : ''}`}>
           {items.map(([to, label, Icon]) => (
-            <NavLink key={label} to={to} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink
+              key={label}
+              to={to}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
               <Icon size={18} strokeWidth={2.2} />
               {label}
             </NavLink>
