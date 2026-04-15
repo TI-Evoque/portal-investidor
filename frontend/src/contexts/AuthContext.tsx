@@ -31,7 +31,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000
 const HEARTBEAT_INTERVAL_MS = 60 * 1000
-const INVESTOR_FEATURES_NOTICE_VERSION = 'v1'
+const INVESTOR_FEATURES_NOTICE_VERSION = 'v2'
 const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click']
 
 const getInvestorFeaturesNoticeKey = (userId: number) => `portal_investor_features_notice_${INVESTOR_FEATURES_NOTICE_VERSION}_${userId}`
