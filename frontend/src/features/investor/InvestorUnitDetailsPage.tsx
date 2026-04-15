@@ -33,7 +33,6 @@ export function InvestorUnitDetailsPage() {
 
   const [yearFilter, setYearFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
 
   useEffect(() => {
@@ -110,16 +109,10 @@ export function InvestorUnitDetailsPage() {
     [files]
   )
 
-  const types = useMemo(
-    () => Array.from(new Set(files.map((file) => file.tipo_arquivo))).sort((a, b) => a.localeCompare(b)),
-    [files]
-  )
-
   const filteredFiles = useMemo(() => {
     return files.filter((file) => {
       if (yearFilter && String(file.ano_referencia) !== yearFilter) return false
       if (monthFilter && file.mes_referencia !== monthFilter) return false
-      if (typeFilter && file.tipo_arquivo !== typeFilter) return false
       if (
         searchFilter &&
         !file.titulo.toLowerCase().includes(searchFilter.toLowerCase()) &&
@@ -129,7 +122,7 @@ export function InvestorUnitDetailsPage() {
       }
       return true
     })
-  }, [files, yearFilter, monthFilter, typeFilter, searchFilter])
+  }, [files, yearFilter, monthFilter, searchFilter])
 
   const groupedFiles = useMemo(() => {
     const grouped = filteredFiles.reduce<Record<string, Record<string, PortalFile[]>>>((acc, file) => {
@@ -154,7 +147,6 @@ export function InvestorUnitDetailsPage() {
   const clearFilters = () => {
     setYearFilter('')
     setMonthFilter('')
-    setTypeFilter('')
     setSearchFilter('')
   }
 
@@ -207,7 +199,7 @@ export function InvestorUnitDetailsPage() {
         <div className="table-top investor-filter-top">
           <div>
             <h3>Filtros da unidade</h3>
-            <span>Refine por ano, mes, tipo e titulo.</span>
+            <span>Refine por ano, mes e titulo. O tipo de documento e sempre DRE.</span>
           </div>
           <button type="button" className="outline-soft" onClick={clearFilters}>Limpar filtros</button>
         </div>
@@ -235,14 +227,6 @@ export function InvestorUnitDetailsPage() {
                   {MONTH_ORDER[parseInt(month, 10) - 1] || month}
                 </option>
               ))}
-            </select>
-          </label>
-
-          <label className="investor-filter-field">
-            <span>Tipo</span>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-              <option value="">Todos</option>
-              {types.map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
           </label>
         </div>

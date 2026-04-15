@@ -1488,6 +1488,84 @@ button, input { font: inherit; }
   .investor-unit-grid {
     grid-template-columns: 1fr;
   }
+
+  .investor-detail-page {
+    gap: 16px;
+  }
+
+  .investor-detail-stats {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .investor-detail-stats .stat-card {
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .investor-filter-card,
+  .investor-document-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .investor-filter-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .investor-filter-top .outline-soft {
+    width: 100%;
+  }
+
+  .investor-year-header,
+  .investor-month-header {
+    align-items: flex-start;
+  }
+
+  .investor-year-header {
+    padding: 14px 16px;
+  }
+
+  .investor-month-header {
+    padding: 14px 16px 0;
+  }
+
+  .investor-detail-file-list {
+    padding: 8px 14px 16px;
+  }
+
+  .investor-detail-file-row {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .investor-detail-file-row .file-row-main {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .investor-detail-file-row .file-row-main span {
+    display: block;
+    margin-top: 4px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+    line-height: 1.45;
+  }
+
+  .investor-detail-file-row .unit-inline-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .investor-detail-file-row .action-chip {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 
