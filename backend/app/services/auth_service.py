@@ -8,6 +8,7 @@ from app.core.security import create_access_token, get_password_hash, password_n
 from app.models.password_reset_code import PasswordResetCode
 from app.models.user import User
 from app.services.email_service import send_password_reset_email, send_password_changed_email
+from app.services.permission_group_service import get_rules_for_role
 from app.utils.validators import normalize_cpf, validate_password_strength
 
 
@@ -99,6 +100,7 @@ def login_user(db: Session, *, email: str, password: str) -> dict:
             'role': user.role,
             'is_authorized': user.is_authorized,
             'must_change_password': bool(user.must_change_password),
+            'permissions': get_rules_for_role(db, user.role),
         },
     }
 

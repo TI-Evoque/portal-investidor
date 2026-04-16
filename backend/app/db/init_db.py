@@ -9,8 +9,10 @@ from app.models.unit import Unit  # noqa: F401
 from app.models.user_unit import UserUnit  # noqa: F401
 from app.models.file import File, FileUnit  # noqa: F401
 from app.models.password_reset_code import PasswordResetCode  # noqa: F401
+from app.models.permission_group import PermissionGroup  # noqa: F401
 from app.core.security import get_password_hash
 from app.services.auth_service import INVESTOR_TEMP_PASSWORD
+from app.services.permission_group_service import ensure_default_permission_groups
 
 
 def init_db() -> None:
@@ -21,7 +23,7 @@ def init_db() -> None:
     """
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
-    required_tables = {'users', 'units', 'user_units', 'files', 'file_units', 'password_reset_codes'}
+    required_tables = {'users', 'units', 'user_units', 'files', 'file_units', 'password_reset_codes', 'permission_groups'}
 
     # Se o banco ainda estiver vazio, cria as tabelas mapeadas pelos models.
     if not required_tables.issubset(existing_tables):
@@ -61,5 +63,7 @@ def init_db() -> None:
         if not has_super_admin:
             db.query(User).filter(User.role == 'admin').update({'role': 'super_admin'}, synchronize_session=False)
             db.commit()
+
+        ensure_default_permission_groups(db)
     finally:
         db.close()

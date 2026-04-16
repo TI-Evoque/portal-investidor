@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from app.api.v1 import routes_auth, routes_dashboard, routes_files, routes_investor, routes_units, routes_users
+from app.api.v1 import routes_auth, routes_dashboard, routes_files, routes_investor, routes_permission_groups, routes_units, routes_users
 from app.core.config import settings
 from app.core.security import decode_token
 from app.core.middleware import SecurityHeadersMiddleware
@@ -91,6 +91,7 @@ app.include_router(routes_units.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_files.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_dashboard.router, prefix=settings.API_V1_PREFIX)
 app.include_router(routes_investor.router, prefix=settings.API_V1_PREFIX)
+app.include_router(routes_permission_groups.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event('startup')

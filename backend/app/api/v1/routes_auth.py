@@ -8,6 +8,7 @@ from app.core.rate_limit import rate_limit
 from app.db.session import get_db
 from app.schemas.auth import ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, ResetPasswordWithCodeRequest
 from app.services.auth_service import change_user_password, login_user, request_password_reset, reset_password_with_code
+from app.services.permission_group_service import get_rules_for_role
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 LAST_SEEN_WRITE_INTERVAL = timedelta(seconds=60)
@@ -45,6 +46,7 @@ def me(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
         'is_authorized': current_user.is_authorized,
         'must_change_password': bool(current_user.must_change_password),
         'admin_message': current_user.admin_message,
+        'permissions': get_rules_for_role(db, current_user.role),
     }
 
 

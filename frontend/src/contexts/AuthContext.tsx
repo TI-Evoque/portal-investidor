@@ -13,6 +13,7 @@ export interface User {
   is_authorized: boolean
   must_change_password?: boolean
   admin_message?: string | null
+  permissions?: Record<string, Record<string, boolean>>
 }
 
 interface AuthContextType {

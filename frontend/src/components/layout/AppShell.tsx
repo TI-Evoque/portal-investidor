@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, FolderOpen, House, LayoutDashboard, LogOut, Menu, Radar, X, Users } from 'lucide-react'
+import { Building2, FolderOpen, House, LayoutDashboard, LogOut, Menu, Radar, ShieldCheck, X, Users } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import evoqueMark from '../../assets/evoque-mark.svg'
@@ -17,6 +17,7 @@ export function AppShell() {
     ['/unidades', 'Unidades', Building2],
     ['/arquivos', 'Arquivos', FolderOpen],
     ['/visibilidade-acessos', 'Acessos', Radar],
+    ['/perfis', 'Perfis', ShieldCheck],
   ] as const
 
   const investorItems = [
@@ -24,12 +25,31 @@ export function AppShell() {
     ['/investidor', 'Minhas Unidades', House],
   ] as const
 
+  const moduleByPath: Record<string, string> = {
+    '/inicio': 'home',
+    '/dashboard': 'dashboard',
+    '/usuarios': 'users',
+    '/unidades': 'units',
+    '/arquivos': 'files',
+    '/visibilidade-acessos': 'access_visibility',
+    '/perfis': 'profiles',
+    '/investidor': 'investor_portal',
+  }
+
+  const canViewPath = (path: string) => {
+    if (user?.role === 'super_admin') return true
+    const moduleKey = moduleByPath[path]
+    if (!moduleKey) return true
+    if (!user?.permissions) return true
+    return user.permissions[moduleKey]?.view !== false
+  }
+
   const items =
     user?.role === 'super_admin'
       ? adminItems
       : user?.role === 'admin'
-        ? adminItems.filter(([to]) => to !== '/visibilidade-acessos')
-        : investorItems
+        ? adminItems.filter(([to]) => !['/visibilidade-acessos', '/perfis'].includes(to)).filter(([to]) => canViewPath(to))
+        : investorItems.filter(([to]) => canViewPath(to))
 
   const handleLogout = () => {
     setIsMobileMenuOpen(false)

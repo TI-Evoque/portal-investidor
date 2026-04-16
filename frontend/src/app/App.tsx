@@ -12,6 +12,7 @@ import { FilesPage } from '../features/files/FilesPage'
 import { HomePage } from '../features/home/HomePage'
 import { InvestorHomePage } from '../features/investor/InvestorHomePage'
 import { InvestorUnitDetailsPage } from '../features/investor/InvestorUnitDetailsPage'
+import { ProfileGroupsPage } from '../features/profiles/ProfileGroupsPage'
 import { RootPage } from '../features/root/RootPage'
 import { UnitsPage } from '../features/units/UnitsPage'
 import { UsersPage } from '../features/users/UsersPage'
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="super_admin">
                 <AccessVisibilityPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="perfis"
+            element={
+              <ProtectedRoute requiredRole="super_admin">
+                <ProfileGroupsPage />
               </ProtectedRoute>
             }
           />
