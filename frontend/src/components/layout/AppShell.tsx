@@ -16,6 +16,9 @@ export function AppShell() {
     ['/usuarios', 'Usuarios', Users],
     ['/unidades', 'Unidades', Building2],
     ['/arquivos', 'Arquivos', FolderOpen],
+  ] as const
+
+  const superAdminItems = [
     ['/visibilidade-acessos', 'Acessos', Radar],
     ['/grupos', 'Grupos', ShieldCheck],
   ] as const
@@ -46,9 +49,9 @@ export function AppShell() {
 
   const items =
     user?.role === 'super_admin'
-      ? adminItems
+      ? [...adminItems, ...superAdminItems]
       : user?.role === 'admin'
-        ? adminItems.filter(([to]) => !['/visibilidade-acessos', '/grupos'].includes(to)).filter(([to]) => canViewPath(to))
+        ? adminItems.filter(([to]) => canViewPath(to))
         : investorItems.filter(([to]) => canViewPath(to))
 
   const handleLogout = () => {
