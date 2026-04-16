@@ -46,16 +46,6 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!isValidCellPhone(formData.telefone)) {
-      setError('Informe um celular com DDD no formato (11) 99999-9999.')
-      return
-    }
-
-    if (!isValidCpf(formData.cpf || '')) {
-      setError('Informe um CPF valido no formato 000.000.000-00.')
-      return
-    }
-
     setLoading(true)
     try {
       const payload: Partial<User> = { ...formData }
@@ -78,6 +68,16 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
         delete payload.sobrenome
         delete payload.cpf
         delete payload.must_change_password
+      }
+
+      if (payload.telefone !== undefined && !isValidCellPhone(payload.telefone)) {
+        setError('Informe um celular com DDD no formato (11) 99999-9999.')
+        return
+      }
+
+      if (payload.cpf !== undefined && !isValidCpf(payload.cpf || '')) {
+        setError('Informe um CPF valido no formato 000.000.000-00.')
+        return
       }
 
       await onSubmit(payload)
