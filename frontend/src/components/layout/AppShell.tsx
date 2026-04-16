@@ -9,6 +9,7 @@ export function AppShell() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const adminItems = [
     ['/inicio', 'Inicio', House],
@@ -20,7 +21,6 @@ export function AppShell() {
 
   const superAdminItems = [
     ['/visibilidade-acessos', 'Acessos', Radar],
-    ['/grupos', 'Grupos', ShieldCheck],
   ] as const
 
   const investorItems = [
@@ -48,7 +48,7 @@ export function AppShell() {
   }
 
   const items =
-    user?.role === 'super_admin'
+    isSuperAdmin
       ? [...adminItems, ...superAdminItems]
       : user?.role === 'admin'
         ? adminItems.filter(([to]) => canViewPath(to))
@@ -95,6 +95,16 @@ export function AppShell() {
               {label}
             </NavLink>
           ))}
+          {isSuperAdmin ? (
+            <NavLink
+              to="/grupos"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              <ShieldCheck size={18} strokeWidth={2.2} />
+              Grupos
+            </NavLink>
+          ) : null}
         </nav>
         <button className="dark-pill" onClick={handleLogout}>
           <LogOut size={18} />
