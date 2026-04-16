@@ -68,6 +68,14 @@ export default function App() {
             }
           />
           <Route
+            path="grupos"
+            element={
+              <ProtectedRoute requiredRole="super_admin">
+                <ProfileGroupsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="perfis"
             element={
               <ProtectedRoute requiredRole="super_admin">

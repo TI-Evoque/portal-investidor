@@ -17,7 +17,7 @@ export function AppShell() {
     ['/unidades', 'Unidades', Building2],
     ['/arquivos', 'Arquivos', FolderOpen],
     ['/visibilidade-acessos', 'Acessos', Radar],
-    ['/perfis', 'Perfis', ShieldCheck],
+    ['/grupos', 'Grupos', ShieldCheck],
   ] as const
 
   const investorItems = [
@@ -32,7 +32,7 @@ export function AppShell() {
     '/unidades': 'units',
     '/arquivos': 'files',
     '/visibilidade-acessos': 'access_visibility',
-    '/perfis': 'profiles',
+    '/grupos': 'profiles',
     '/investidor': 'investor_portal',
   }
 
@@ -48,7 +48,7 @@ export function AppShell() {
     user?.role === 'super_admin'
       ? adminItems
       : user?.role === 'admin'
-        ? adminItems.filter(([to]) => !['/visibilidade-acessos', '/perfis'].includes(to)).filter(([to]) => canViewPath(to))
+        ? adminItems.filter(([to]) => !['/visibilidade-acessos', '/grupos'].includes(to)).filter(([to]) => canViewPath(to))
         : investorItems.filter(([to]) => canViewPath(to))
 
   const handleLogout = () => {
