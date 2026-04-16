@@ -18,7 +18,10 @@ interface UserEditModalProps {
 }
 
 export function UserEditModal({ user, units, permissionGroups = [], currentUserPermissions, currentUserRole, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
-  const [activeTab, setActiveTab] = useState<EditTab>('dados')
+  const canEditUser = currentUserPermissions?.edit !== false
+  const canManageUnits = currentUserPermissions?.assign_units !== false
+  const canResetPassword = currentUserPermissions?.reset_password !== false
+  const [activeTab, setActiveTab] = useState<EditTab>(() => (!canEditUser && canManageUnits ? 'unidades' : 'dados'))
   const [formData, setFormData] = useState<Partial<User>>({
     email: user.email,
     is_authorized: user.is_authorized,
@@ -35,7 +38,6 @@ export function UserEditModal({ user, units, permissionGroups = [], currentUserP
   const [resetLoading, setResetLoading] = useState(false)
   const [error, setError] = useState('')
   const isSuperAdmin = currentUserRole === 'super_admin'
-  const canManageUnits = currentUserPermissions?.assign_units !== false
 
   const unitOptions = useMemo(
     () => units.map((unit) => ({ id: unit.id, label: unit.nome, hint: [unit.cidade, unit.estado].filter(Boolean).join(' • ') })),
@@ -121,10 +123,10 @@ export function UserEditModal({ user, units, permissionGroups = [], currentUserP
         </div>
 
         <div className="modal-tabs" role="tablist" aria-label="Editar usuario">
-          <button type="button" className={tabClassName('dados')} onClick={() => setActiveTab('dados')}>Dados</button>
-          <button type="button" className={tabClassName('permissoes')} onClick={() => setActiveTab('permissoes')}>Permissoes</button>
+          {canEditUser ? <button type="button" className={tabClassName('dados')} onClick={() => setActiveTab('dados')}>Dados</button> : null}
+          {canEditUser ? <button type="button" className={tabClassName('permissoes')} onClick={() => setActiveTab('permissoes')}>Permissoes</button> : null}
           {canManageUnits ? <button type="button" className={tabClassName('unidades')} onClick={() => setActiveTab('unidades')}>Unidades</button> : null}
-          <button type="button" className={tabClassName('seguranca')} onClick={() => setActiveTab('seguranca')}>Seguranca</button>
+          {canResetPassword ? <button type="button" className={tabClassName('seguranca')} onClick={() => setActiveTab('seguranca')}>Seguranca</button> : null}
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form modal-form-spacious">

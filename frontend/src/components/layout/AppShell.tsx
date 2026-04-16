@@ -95,17 +95,17 @@ export function AppShell() {
               {label}
             </NavLink>
           ))}
-          {isSuperAdmin ? (
-            <NavLink
-              to="/grupos"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              <ShieldCheck size={18} strokeWidth={2.2} />
-              Grupos
-            </NavLink>
-          ) : null}
         </nav>
+        {isSuperAdmin ? (
+          <NavLink
+            to="/grupos"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={({ isActive }) => `nav-item super-admin-groups-link ${isActive ? 'active' : ''}`}
+          >
+            <ShieldCheck size={18} strokeWidth={2.2} />
+            Grupos
+          </NavLink>
+        ) : null}
         <button className="dark-pill" onClick={handleLogout}>
           <LogOut size={18} />
           Sair

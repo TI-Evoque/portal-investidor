@@ -78,6 +78,7 @@ button, input { font: inherit; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 8px; }
 .nav-item { text-decoration: none; color: white; background: transparent; border-radius: 20px; padding: 16px 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .nav-item.active { background: #fff1ea; color: var(--orange); }
+.super-admin-groups-link { flex: 0 0 auto; }
 .nav-icon { font-size: 18px; }
 .mobile-menu-toggle { display: none; }
 .dark-pill, .outline-pill { margin-top: auto; border-radius: 22px; padding: 14px 18px; border: none; font-weight: 700; cursor: pointer; }

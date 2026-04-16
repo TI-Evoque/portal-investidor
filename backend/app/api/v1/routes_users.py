@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUnitsUpdateRequest, UserUpdateRequest
 from app.services.auth_service import INVESTOR_TEMP_PASSWORD, generate_temporary_password
 from app.services.email_service import send_password_changed_email
+from app.services.permission_group_service import has_user_permission
 from app.services.user_service import ONLINE_WINDOW, get_unit_ids_map, serialize_user, sync_user_units
 from app.utils.validators import normalize_cpf
 
@@ -106,6 +107,9 @@ def send_admin_message(
 
 @router.post('', response_model=AdminCreateUserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
+    if not has_user_permission(db, current_admin, 'users', 'create'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite criar usuarios')
+
     normalized_email = payload.email.strip().lower()
     nome = payload.nome.strip()
     sobrenome = payload.sobrenome.strip()
@@ -184,6 +188,9 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
     if user.id == current_admin.id and data.get('is_active') is False:
         raise HTTPException(status_code=400, detail='Voce nao pode bloquear o proprio usuario')
 
+    if unit_ids is not None and not has_user_permission(db, current_admin, 'users', 'assign_units'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite gerenciar unidades de usuarios')
+
     if requested_role is not None:
         _ensure_manageable_role(current_admin, requested_role)
         if not is_super_admin(current_admin):
@@ -199,6 +206,10 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
             if not group:
                 raise HTTPException(status_code=404, detail='Grupo de permissao nao encontrado')
         user.permission_group_id = permission_group_id
+
+    editable_fields = set(data.keys()) - {'role'}
+    if editable_fields and not has_user_permission(db, current_admin, 'users', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar usuarios')
 
     if email_value is not None:
         normalized_email = email_value.strip().lower()
@@ -248,6 +259,9 @@ def update_user_units(
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
 
     _ensure_manageable_user(current_admin, user)
+
+    if not has_user_permission(db, current_admin, 'users', 'assign_units'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite gerenciar unidades de usuarios')
 
     try:
         sync_user_units(db, user, payload.unit_ids)

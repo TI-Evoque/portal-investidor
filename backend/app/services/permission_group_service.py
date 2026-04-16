@@ -271,6 +271,13 @@ def get_rules_for_user(db: Session, user) -> dict[str, dict[str, bool]]:
     return get_rules_for_role(db, getattr(user, 'role', None))
 
 
+def has_user_permission(db: Session, user, module_key: str, action_key: str) -> bool:
+    if getattr(user, 'role', None) == 'super_admin':
+        return True
+    rules = get_rules_for_user(db, user)
+    return rules.get(module_key, {}).get(action_key) is True
+
+
 def unique_slug(db: Session, name: str, group_id: int | None = None) -> str:
     base_slug = slugify_name(name)
     slug = base_slug
