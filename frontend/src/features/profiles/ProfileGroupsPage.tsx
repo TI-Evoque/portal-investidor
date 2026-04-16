@@ -14,6 +14,8 @@ type PermissionModule = {
   key: string
   label: string
   description: string
+  screen_type: 'admin' | 'user'
+  screen_type_label: string
   actions: PermissionAction[]
 }
 
@@ -64,7 +66,31 @@ function PermissionGroupModal({
       ? { name: group.name, description: group.description || '', rules: cloneRules(group.rules) }
       : emptyForm
   ))
+  const [activeScreenType, setActiveScreenType] = useState<'admin' | 'user'>('admin')
   const [error, setError] = useState('')
+
+  const screenTypeOptions = useMemo(
+    () => [
+      {
+        key: 'admin' as const,
+        label: 'Telas de administrador',
+        description: 'Admin e super admin: areas que modificam o sistema.',
+        count: modules.filter((module) => module.screen_type === 'admin').length,
+      },
+      {
+        key: 'user' as const,
+        label: 'Telas de usuario',
+        description: 'Investidor: areas de consulta e documentos liberados.',
+        count: modules.filter((module) => module.screen_type === 'user').length,
+      },
+    ],
+    [modules]
+  )
+
+  const visibleModules = useMemo(
+    () => modules.filter((module) => module.screen_type === activeScreenType),
+    [activeScreenType, modules]
+  )
 
   const toggleRule = (moduleKey: string, actionKey: string) => {
     setForm((current) => ({
@@ -118,7 +144,7 @@ function PermissionGroupModal({
         <div className="modal-header modal-header-sticky">
           <div>
             <h2>{mode === 'create' ? 'Novo grupo de permissao' : 'Editar grupo'}</h2>
-            <p className="modal-subtitle">Escolha o que esse perfil pode visualizar, criar, editar, deletar ou ocultar.</p>
+            <p className="modal-subtitle">Escolha o tipo de tela e marque cada botao ou acao individualmente.</p>
           </div>
           <button type="button" onClick={onClose} className="modal-close-btn">X</button>
         </div>
@@ -145,8 +171,23 @@ function PermissionGroupModal({
             </div>
           </div>
 
+          <div className="permission-screen-type-grid">
+            {screenTypeOptions.map((option) => (
+              <button
+                type="button"
+                key={option.key}
+                className={`permission-screen-type-card ${activeScreenType === option.key ? 'active' : ''}`}
+                onClick={() => setActiveScreenType(option.key)}
+              >
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+                <small>{option.count} tela(s)</small>
+              </button>
+            ))}
+          </div>
+
           <div className="permission-rule-grid">
-            {modules.map((module) => {
+            {visibleModules.map((module) => {
               const enabledCount = module.actions.filter((action) => form.rules[module.key]?.[action.key]).length
               const allEnabled = enabledCount === module.actions.length
 
@@ -156,6 +197,7 @@ function PermissionGroupModal({
                     <div>
                       <h3>{module.label}</h3>
                       <p>{module.description}</p>
+                      <span className="permission-screen-chip">{module.screen_type_label}</span>
                     </div>
                     <button type="button" className="outline-soft mini" onClick={() => toggleModule(module, !allEnabled)}>
                       {allEnabled ? 'Limpar' : 'Marcar tudo'}

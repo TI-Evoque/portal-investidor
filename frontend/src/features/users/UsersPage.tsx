@@ -31,6 +31,7 @@ type PendingUserAction = {
 export function UsersPage() {
   const { user: currentUser } = useAuth()
   const isSuperAdmin = currentUser?.role === 'super_admin'
+  const userPermissions = currentUser?.permissions?.users
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -170,6 +171,13 @@ export function UsersPage() {
     setPendingAction(action)
   }
 
+  const canUseUserAction = (action: string, hideKey?: string) => {
+    if (!userPermissions) return true
+    if (userPermissions[action] === false) return false
+    if (hideKey && userPermissions[hideKey] === true) return false
+    return true
+  }
+
   const confirmPendingAction = async () => {
     if (!pendingAction) return
     setIsConfirmingAction(true)
@@ -183,7 +191,14 @@ export function UsersPage() {
 
   return (
     <div className="users-page-wrap">
-      <SectionHeader title="Usuarios" action={<button className="outline-soft" onClick={() => setIsCreatingUser(true)}>Novo usuario</button>} />
+      <SectionHeader
+        title="Usuarios"
+        action={
+          canUseUserAction('create', 'hide_create_button') ? (
+            <button className="outline-soft" onClick={() => setIsCreatingUser(true)}>Novo usuario</button>
+          ) : null
+        }
+      />
 
       <div className="search-bar user-search">
         <input
@@ -250,10 +265,10 @@ export function UsersPage() {
                 <div className={`pill-status ${user.must_change_password ? 'warn' : 'ok'}`}>{user.must_change_password ? 'Troca de senha pendente' : 'Senha regular'}</div>
               </div>
               <div className="user-actions-grid">
-                {(currentUser?.role === 'admin' || isSuperAdmin) ? (
+                {(currentUser?.role === 'admin' || isSuperAdmin) && canUseUserAction('edit', 'hide_edit_button') ? (
                   <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
                 ) : null}
-                {isSuperAdmin && user.role !== 'super_admin' ? (
+                {isSuperAdmin && user.role !== 'super_admin' && canUseUserAction('grant_admin', 'hide_grant_admin_button') ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({
@@ -268,33 +283,37 @@ export function UsersPage() {
                     className="action-chip icon-action-chip"
                   ><Shield size={15} /> {user.role === 'admin' ? 'Remover admin' : 'Dar admin'}</button>
                 ) : null}
-                <button
-                  onClick={() =>
-                    openActionConfirmation({
-                      title: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
-                      message: user.is_authorized
-                        ? `Tem certeza que deseja revogar o acesso de ${userName} ao portal?`
-                        : `Tem certeza que deseja liberar o acesso de ${userName} ao portal?`,
-                      confirmLabel: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
-                      run: async () => { await quickPatchUser(user, { is_authorized: !user.is_authorized }) },
-                    })
-                  }
-                  className="action-chip icon-action-chip"
-                ><BadgeCheck size={15} /> {user.is_authorized ? 'Revogar acesso' : 'Liberar acesso'}</button>
-                <button
-                  onClick={() =>
-                    openActionConfirmation({
-                      title: user.is_active ? 'Bloquear usuario' : 'Desbloquear usuario',
-                      message: user.is_active
-                        ? `Tem certeza que deseja bloquear ${userName} e impedir novos acessos?`
-                        : `Tem certeza que deseja desbloquear ${userName} e permitir novo acesso ao sistema?`,
-                      confirmLabel: user.is_active ? 'Bloquear' : 'Desbloquear',
-                      run: async () => { await quickPatchUser(user, { is_active: !user.is_active }) },
-                    })
-                  }
-                  className="action-chip icon-action-chip"
-                >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
-                {(currentUser?.role === 'admin' || isSuperAdmin) ? (
+                {canUseUserAction('edit', 'hide_revoke_access_button') ? (
+                  <button
+                    onClick={() =>
+                      openActionConfirmation({
+                        title: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
+                        message: user.is_authorized
+                          ? `Tem certeza que deseja revogar o acesso de ${userName} ao portal?`
+                          : `Tem certeza que deseja liberar o acesso de ${userName} ao portal?`,
+                        confirmLabel: user.is_authorized ? 'Revogar acesso' : 'Liberar acesso',
+                        run: async () => { await quickPatchUser(user, { is_authorized: !user.is_authorized }) },
+                      })
+                    }
+                    className="action-chip icon-action-chip"
+                  ><BadgeCheck size={15} /> {user.is_authorized ? 'Revogar acesso' : 'Liberar acesso'}</button>
+                ) : null}
+                {canUseUserAction('edit', 'hide_block_button') ? (
+                  <button
+                    onClick={() =>
+                      openActionConfirmation({
+                        title: user.is_active ? 'Bloquear usuario' : 'Desbloquear usuario',
+                        message: user.is_active
+                          ? `Tem certeza que deseja bloquear ${userName} e impedir novos acessos?`
+                          : `Tem certeza que deseja desbloquear ${userName} e permitir novo acesso ao sistema?`,
+                        confirmLabel: user.is_active ? 'Bloquear' : 'Desbloquear',
+                        run: async () => { await quickPatchUser(user, { is_active: !user.is_active }) },
+                      })
+                    }
+                    className="action-chip icon-action-chip"
+                  >{user.is_active ? <Lock size={15} /> : <LockOpen size={15} />} {user.is_active ? 'Bloquear' : 'Desbloquear'}</button>
+                ) : null}
+                {(currentUser?.role === 'admin' || isSuperAdmin) && canUseUserAction('reset_password', 'hide_reset_password_button') ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({
@@ -307,7 +326,7 @@ export function UsersPage() {
                     className="action-chip icon-action-chip"
                   ><KeyRound size={15} /> Resetar senha</button>
                 ) : null}
-                {isSuperAdmin ? (
+                {isSuperAdmin && canUseUserAction('delete', 'hide_delete_button') ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({

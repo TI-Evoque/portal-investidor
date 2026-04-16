@@ -307,6 +307,7 @@ function UnitUsersModal({
 export function UnitsPage() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
+  const unitPermissions = user?.permissions?.units
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -395,13 +396,22 @@ export function UnitsPage() {
     setSelectedUnitForUsers(unit)
   }
 
+  const canUseUnitAction = (action: string, hideKey?: string) => {
+    if (!unitPermissions) return true
+    if (unitPermissions[action] === false) return false
+    if (hideKey && unitPermissions[hideKey] === true) return false
+    return true
+  }
+
   return (
     <div>
       <SectionHeader
         title="Unidades"
         action={
           <div className="header-actions">
-            <button className="outline-soft" onClick={handleOpenCreateModal}>+ Cadastrar unidade</button>
+            {canUseUnitAction('create', 'hide_create_button') ? (
+              <button className="outline-soft" onClick={handleOpenCreateModal}>+ Cadastrar unidade</button>
+            ) : null}
           </div>
         }
       />
@@ -443,10 +453,18 @@ export function UnitsPage() {
               <span>{unit.status_texto}</span>
             </div>
             <div className="unit-actions rich">
-              <button onClick={() => openUnitFiles(unit)} title="Upload e PDFs" className="icon-square-btn"><FolderUp size={18} /></button>
-              <button onClick={() => openUnitUsers(unit)} title="Investidores associados" className="icon-square-btn"><FilePenLine size={18} /></button>
-              <button onClick={() => handleOpenEditModal(unit)} title="Editar" className="icon-square-btn"><PencilLine size={18} /></button>
-              {isSuperAdmin ? <button onClick={() => handleDelete(unit.id)} title="Deletar" className="icon-square-btn"><Trash2 size={18} /></button> : null}
+              {canUseUnitAction('create', 'hide_upload_button') ? (
+                <button onClick={() => openUnitFiles(unit)} title="Upload e PDFs" className="icon-square-btn"><FolderUp size={18} /></button>
+              ) : null}
+              {canUseUnitAction('view', 'hide_investors_button') ? (
+                <button onClick={() => openUnitUsers(unit)} title="Investidores associados" className="icon-square-btn"><FilePenLine size={18} /></button>
+              ) : null}
+              {canUseUnitAction('edit', 'hide_edit_button') ? (
+                <button onClick={() => handleOpenEditModal(unit)} title="Editar" className="icon-square-btn"><PencilLine size={18} /></button>
+              ) : null}
+              {isSuperAdmin && canUseUnitAction('delete', 'hide_delete_button') ? (
+                <button onClick={() => handleDelete(unit.id)} title="Deletar" className="icon-square-btn"><Trash2 size={18} /></button>
+              ) : null}
             </div>
           </div>
         ))}

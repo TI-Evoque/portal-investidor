@@ -165,6 +165,7 @@ function FileEditModal({
 export function FilesPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const filePermissions = user?.permissions?.files
   const [files, setFiles] = useState<PortalFile[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -269,6 +270,13 @@ export function FilesPage() {
     setEditingFile(null)
   }
 
+  const canUseFileAction = (action: string, hideKey?: string) => {
+    if (!filePermissions) return true
+    if (filePermissions[action] === false) return false
+    if (hideKey && filePermissions[hideKey] === true) return false
+    return true
+  }
+
   return (
     <div>
       <SectionHeader title="Arquivos" />
@@ -317,30 +325,34 @@ export function FilesPage() {
                 <span className="file-main-text muted">{file.unit_names.join(', ')}</span>
                 <span>{getMonthLabel(file.mes_referencia)}/{file.ano_referencia}</span>
                 <div className="file-row-actions">
-                  <button
-                    type="button"
-                    className="icon-square-btn"
-                    title="Visualizar PDF"
-                    onClick={() => void handlePreview(file)}
-                    disabled={busyId === file.id}
-                  >
-                    <Eye size={17} />
-                  </button>
-                  {isAdmin ? (
+                  {canUseFileAction('view', 'hide_preview_button') ? (
+                    <button
+                      type="button"
+                      className="icon-square-btn"
+                      title="Visualizar PDF"
+                      onClick={() => void handlePreview(file)}
+                      disabled={busyId === file.id}
+                    >
+                      <Eye size={17} />
+                    </button>
+                  ) : null}
+                  {isAdmin && canUseFileAction('edit', 'hide_edit_button') ? (
                     <button type="button" className="icon-square-btn" title="Editar" onClick={() => setEditingFile(file)}>
                       <PencilLine size={17} />
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="icon-square-btn"
-                    title="Baixar PDF"
-                    onClick={() => void handleDownload(file)}
-                    disabled={busyId === file.id}
-                  >
-                    <Download size={17} />
-                  </button>
-                  {isAdmin ? (
+                  {canUseFileAction('download', 'hide_download_button') ? (
+                    <button
+                      type="button"
+                      className="icon-square-btn"
+                      title="Baixar PDF"
+                      onClick={() => void handleDownload(file)}
+                      disabled={busyId === file.id}
+                    >
+                      <Download size={17} />
+                    </button>
+                  ) : null}
+                  {isAdmin && canUseFileAction('delete', 'hide_delete_button') ? (
                     <button
                       type="button"
                       className="icon-square-btn danger"

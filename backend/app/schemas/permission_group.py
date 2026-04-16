@@ -15,6 +15,8 @@ class PermissionModuleOut(BaseModel):
     key: str
     label: str
     description: str
+    screen_type: str
+    screen_type_label: str
     actions: list[PermissionActionOut]
 
 
