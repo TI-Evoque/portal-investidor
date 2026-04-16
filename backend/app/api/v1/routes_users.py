@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps.auth import is_super_admin, require_admin, require_super_admin
 from app.core.security import get_password_hash
 from app.db.session import get_db
+from app.models.permission_group import PermissionGroup
 from app.models.user import User
 from app.schemas.user import AdminCreateUserRequest, AdminCreateUserResponse, AdminMessageRequest, UserOut, UserUnitsUpdateRequest, UserUpdateRequest
 from app.services.auth_service import INVESTOR_TEMP_PASSWORD, generate_temporary_password
@@ -112,6 +113,11 @@ def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), 
     telefone = payload.telefone.strip()
     requested_role = (payload.role or 'investor').strip()
     _ensure_manageable_role(current_admin, requested_role)
+    permission_group_id = payload.permission_group_id if is_super_admin(current_admin) else None
+    if permission_group_id is not None:
+        group = db.query(PermissionGroup).filter(PermissionGroup.id == permission_group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail='Grupo de permissao nao encontrado')
 
     existing = db.query(User).filter((User.email == normalized_email) | (User.cpf == cpf)).first()
     if existing:
@@ -127,6 +133,7 @@ def create_user(payload: AdminCreateUserRequest, db: Session = Depends(get_db), 
         telefone=telefone or None,
         password_hash=get_password_hash(generated_password),
         role=requested_role,
+        permission_group_id=permission_group_id,
         is_active=True,
         is_authorized=bool(payload.is_authorized),
         must_change_password=True if is_investor else bool(payload.must_change_password),
@@ -166,8 +173,10 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
 
-    data = payload.model_dump(exclude_none=True)
+    data = payload.model_dump(exclude_unset=True)
     unit_ids = data.pop('unit_ids', None)
+    permission_group_marker = object()
+    permission_group_id = data.pop('permission_group_id', permission_group_marker)
     requested_role = data.get('role')
     email_value = data.get('email')
     cpf_value = data.get('cpf')
@@ -181,6 +190,15 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
           raise HTTPException(status_code=403, detail='Apenas o super admin pode alterar o perfil do usuario')
         if user.id == current_admin.id and requested_role != 'super_admin':
             raise HTTPException(status_code=400, detail='Voce nao pode remover o proprio perfil de super admin')
+
+    if permission_group_id is not permission_group_marker:
+        if not is_super_admin(current_admin):
+            raise HTTPException(status_code=403, detail='Apenas o super admin pode alterar o grupo de permissao')
+        if permission_group_id is not None:
+            group = db.query(PermissionGroup).filter(PermissionGroup.id == permission_group_id).first()
+            if not group:
+                raise HTTPException(status_code=404, detail='Grupo de permissao nao encontrado')
+        user.permission_group_id = permission_group_id
 
     if email_value is not None:
         normalized_email = email_value.strip().lower()
@@ -197,7 +215,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         data['cpf'] = normalized_cpf
 
     if not is_super_admin(current_admin):
-        forbidden_fields = {'nome', 'sobrenome', 'cpf', 'must_change_password'}
+        forbidden_fields = {'nome', 'sobrenome', 'cpf', 'must_change_password', 'permission_group_id'}
         attempted = forbidden_fields.intersection(data.keys())
         if attempted:
             raise HTTPException(status_code=403, detail='O admin nao pode alterar esses dados cadastrais por esta tela')

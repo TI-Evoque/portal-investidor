@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
-import { Unit } from '../../types'
+import { PermissionGroupOption, Unit } from '../../types'
 import { useCep } from '../../lib/useCep'
 import { formatCpf, isValidCpf } from '../../lib/cpf'
 import { formatPhone, isValidCellPhone } from '../../lib/phone'
@@ -14,6 +14,7 @@ export type CreateUserPayload = {
   telefone: string
   must_change_password: boolean
   role: 'admin' | 'investor'
+  permission_group_id?: number | null
   is_authorized: boolean
   unit_ids: number[]
 }
@@ -22,11 +23,12 @@ type CreateTab = 'dados' | 'unidades'
 
 interface UserCreateModalProps {
   units: Unit[]
+  permissionGroups?: PermissionGroupOption[]
   onClose: () => void
   onSubmit: (data: CreateUserPayload) => Promise<void>
 }
 
-export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalProps) {
+export function UserCreateModal({ units, permissionGroups = [], onClose, onSubmit }: UserCreateModalProps) {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
   const formRef = useRef<HTMLFormElement>(null)
@@ -40,6 +42,7 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
     telefone: '',
     must_change_password: true,
     role: 'investor',
+    permission_group_id: null,
     is_authorized: true,
     unit_ids: [],
   })
@@ -65,7 +68,7 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
     [units, formData.unit_ids]
   )
 
-  const handleChange = (field: keyof CreateUserPayload, value: string | boolean | number[]) => {
+  const handleChange = (field: keyof CreateUserPayload, value: string | boolean | number[] | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     setError('')
   }
@@ -194,6 +197,23 @@ export function UserCreateModal({ units, onClose, onSubmit }: UserCreateModalPro
                       <div>
                         <strong>Administrador</strong>
                         <span>Pode gerenciar usuários, unidades e arquivos.</span>
+                      </div>
+                    </label>
+                  ) : null}
+                  {isSuperAdmin ? (
+                    <label className="setting-toggle setting-toggle-rich">
+                      <div>
+                        <strong>Grupo de permissao</strong>
+                        <span>Define quais telas e botoes esse usuario podera usar.</span>
+                        <select
+                          value={formData.permission_group_id ?? ''}
+                          onChange={(e) => handleChange('permission_group_id', e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">Usar grupo padrao do perfil</option>
+                          {permissionGroups.map((group) => (
+                            <option key={group.id} value={group.id}>{group.name}</option>
+                          ))}
+                        </select>
                       </div>
                     </label>
                   ) : null}

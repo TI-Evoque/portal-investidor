@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BadgeCheck, KeyRound, Lock, LockOpen, PencilLine, Shield, Trash2, UsersRound } from 'lucide-react'
 import api from '../../lib/api'
 import { formatPhone } from '../../lib/phone'
-import { User, Unit } from '../../types'
+import { PermissionGroupOption, User, Unit } from '../../types'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { Pagination } from '../../components/ui/Pagination'
 import { UserEditModal } from '../../components/modals/UserEditModal'
@@ -34,6 +34,7 @@ export function UsersPage() {
   const userPermissions = currentUser?.permissions?.users
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
+  const [permissionGroups, setPermissionGroups] = useState<PermissionGroupOption[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [summaryFilter, setSummaryFilter] = useState<'all' | 'active' | 'inactive' | 'admin' | 'super_admin'>('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -69,9 +70,22 @@ export function UsersPage() {
     }
   }
 
+  const loadPermissionGroups = async () => {
+    if (!isSuperAdmin) {
+      setPermissionGroups([])
+      return
+    }
+    try {
+      const res = await api.get('/permission-groups')
+      setPermissionGroups(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      setPermissionGroups([])
+    }
+  }
+
   useEffect(() => {
-    void Promise.all([loadUsers(), loadUnits()])
-  }, [])
+    void Promise.all([loadUsers(), loadUnits(), loadPermissionGroups()])
+  }, [isSuperAdmin])
 
   const visibleUsers = useMemo(
     () => (isSuperAdmin ? users : users.filter((user) => user.role !== 'super_admin')),
@@ -178,6 +192,8 @@ export function UsersPage() {
     return true
   }
 
+  const canOpenUserEditor = canUseUserAction('edit', 'hide_edit_button') || canUseUserAction('assign_units')
+
   const confirmPendingAction = async () => {
     if (!pendingAction) return
     setIsConfirmingAction(true)
@@ -265,7 +281,7 @@ export function UsersPage() {
                 <div className={`pill-status ${user.must_change_password ? 'warn' : 'ok'}`}>{user.must_change_password ? 'Troca de senha pendente' : 'Senha regular'}</div>
               </div>
               <div className="user-actions-grid">
-                {(currentUser?.role === 'admin' || isSuperAdmin) && canUseUserAction('edit', 'hide_edit_button') ? (
+                {(currentUser?.role === 'admin' || isSuperAdmin) && canOpenUserEditor ? (
                   <button onClick={() => setEditingUser(user)} className="action-chip primary icon-action-chip"><PencilLine size={15} /> Editar</button>
                 ) : null}
                 {isSuperAdmin && user.role !== 'super_admin' && canUseUserAction('grant_admin', 'hide_grant_admin_button') ? (
@@ -359,13 +375,15 @@ export function UsersPage() {
         <UserEditModal
           user={editingUser}
           units={units}
+          permissionGroups={permissionGroups}
+          currentUserPermissions={userPermissions}
           currentUserRole={currentUser?.role}
           onClose={() => setEditingUser(undefined)}
           onSubmit={handleSubmitUser}
           onResetPassword={(mustChangePassword) => handleResetPassword(editingUser, mustChangePassword)}
         />
       ) : null}
-      {isCreatingUser ? <UserCreateModal units={units} onClose={() => setIsCreatingUser(false)} onSubmit={handleCreateUser} /> : null}
+      {isCreatingUser ? <UserCreateModal units={units} permissionGroups={permissionGroups} onClose={() => setIsCreatingUser(false)} onSubmit={handleCreateUser} /> : null}
       {createdUser ? <UserCreatedModal email={createdUser.email} password={createdUser.password} mustChangePassword={createdUser.mustChangePassword} title={createdUser.title} onClose={() => setCreatedUser(null)} /> : null}
       {pendingAction ? (
         <ConfirmActionModal

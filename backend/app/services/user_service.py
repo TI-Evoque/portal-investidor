@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.user_unit import UserUnit
+from app.models.permission_group import PermissionGroup
 from app.schemas.user import UserOut
 
 ONLINE_WINDOW = timedelta(seconds=75)
@@ -38,6 +39,9 @@ def get_unit_ids_map(db: Session, user_ids: list[int]) -> dict[int, list[int]]:
 
 def serialize_user(user: User, unit_ids: list[int] | None = None) -> UserOut:
     created_at = user.created_at or datetime.utcnow()
+    permission_group_name = None
+    if getattr(user, 'permission_group', None):
+        permission_group_name = user.permission_group.name
     return UserOut.model_validate({
         'id': int(user.id),
         'nome': (user.nome or '').strip(),
@@ -46,6 +50,8 @@ def serialize_user(user: User, unit_ids: list[int] | None = None) -> UserOut:
         'email': (user.email or '').strip(),
         'telefone': user.telefone,
         'role': (user.role or 'investor').strip(),
+        'permission_group_id': user.permission_group_id,
+        'permission_group_name': permission_group_name,
         'is_active': bool(user.is_active),
         'is_authorized': bool(user.is_authorized),
         'must_change_password': bool(user.must_change_password),

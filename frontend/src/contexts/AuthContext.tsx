@@ -10,6 +10,7 @@ export interface User {
   email: string
   telefone?: string | null
   role: 'super_admin' | 'admin' | 'investor'
+  permission_group_id?: number | null
   is_authorized: boolean
   must_change_password?: boolean
   admin_message?: string | null

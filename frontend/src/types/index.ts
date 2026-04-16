@@ -34,6 +34,8 @@ export type User = {
   cpf?: string | null
   telefone?: string | null
   role: string
+  permission_group_id?: number | null
+  permission_group_name?: string | null
   is_active: boolean
   is_authorized: boolean
   must_change_password?: boolean
@@ -43,4 +45,5 @@ export type User = {
   updated_at?: string | null
   unit_ids: number[]
 }
+export type PermissionGroupOption = { id: number; name: string; slug: string; description?: string | null; is_system: boolean }
 export type PortalFile = { id: number; titulo: string; nome_arquivo: string; tipo_arquivo: string; mes_referencia: string; ano_referencia: number; unit_ids: number[]; unit_names: string[]; created_at?: string }

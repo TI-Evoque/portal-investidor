@@ -44,6 +44,9 @@ def init_db() -> None:
         with engine.begin() as connection:
             connection.execute(text('ALTER TABLE users ADD COLUMN temp_password_pending BOOLEAN NOT NULL DEFAULT 0'))
         added_temp_password_pending = True
+    if 'users' in existing_tables and 'permission_group_id' not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text('ALTER TABLE users ADD COLUMN permission_group_id INTEGER NULL'))
 
     db = SessionLocal()
     try:

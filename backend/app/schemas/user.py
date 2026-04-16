@@ -10,6 +10,8 @@ class UserOut(BaseModel):
     email: str
     telefone: str | None = None
     role: str
+    permission_group_id: int | None = None
+    permission_group_name: str | None = None
     is_active: bool
     is_authorized: bool
     must_change_password: bool = False
@@ -31,6 +33,7 @@ class UserUpdateRequest(BaseModel):
     is_active: bool | None = None
     is_authorized: bool | None = None
     role: str | None = None
+    permission_group_id: int | None = None
     must_change_password: bool | None = None
     unit_ids: list[int] | None = None
 
@@ -51,6 +54,7 @@ class AdminCreateUserRequest(BaseModel):
     telefone: str = Field(min_length=8, max_length=30)
     must_change_password: bool = True
     role: str = 'investor'
+    permission_group_id: int | None = None
     is_authorized: bool = True
     unit_ids: list[int] = Field(default_factory=list)
 

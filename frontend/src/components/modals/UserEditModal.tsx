@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { User, Unit } from '../../types'
+import { PermissionGroupOption, User, Unit } from '../../types'
 import { formatCpf, isValidCpf } from '../../lib/cpf'
 import { MultiSelectDropdown } from '../ui/MultiSelectDropdown'
 import { formatPhone, isValidCellPhone } from '../../lib/phone'
@@ -9,18 +9,21 @@ type EditTab = 'dados' | 'permissoes' | 'unidades' | 'seguranca'
 interface UserEditModalProps {
   user: User
   units: Unit[]
+  permissionGroups?: PermissionGroupOption[]
+  currentUserPermissions?: Record<string, boolean>
   currentUserRole?: 'super_admin' | 'admin' | 'investor'
   onClose: () => void
   onSubmit: (data: Partial<User>) => Promise<void>
   onResetPassword: (mustChangePassword: boolean) => Promise<void>
 }
 
-export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
+export function UserEditModal({ user, units, permissionGroups = [], currentUserPermissions, currentUserRole, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
   const [activeTab, setActiveTab] = useState<EditTab>('dados')
   const [formData, setFormData] = useState<Partial<User>>({
     email: user.email,
     is_authorized: user.is_authorized,
     role: user.role,
+    permission_group_id: user.permission_group_id ?? null,
     is_active: user.is_active,
     cpf: formatCpf(user.cpf || ''),
     telefone: user.telefone,
@@ -32,6 +35,7 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
   const [resetLoading, setResetLoading] = useState(false)
   const [error, setError] = useState('')
   const isSuperAdmin = currentUserRole === 'super_admin'
+  const canManageUnits = currentUserPermissions?.assign_units !== false
 
   const unitOptions = useMemo(
     () => units.map((unit) => ({ id: unit.id, label: unit.nome, hint: [unit.cidade, unit.estado].filter(Boolean).join(' • ') })),
@@ -58,6 +62,7 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
       if (payload.is_active === user.is_active) delete payload.is_active
       if (payload.must_change_password === user.must_change_password) delete payload.must_change_password
       if (payload.role === user.role) delete payload.role
+      if (payload.permission_group_id === (user.permission_group_id ?? null)) delete payload.permission_group_id
 
       const currentUnitIds = JSON.stringify([...(user.unit_ids || [])].sort((a, b) => a - b))
       const nextUnitIds = JSON.stringify([...(payload.unit_ids || [])].sort((a, b) => a - b))
@@ -65,6 +70,7 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
 
       if (!isSuperAdmin) {
         delete payload.role
+        delete payload.permission_group_id
         delete payload.sobrenome
         delete payload.cpf
         delete payload.must_change_password
@@ -117,7 +123,7 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
         <div className="modal-tabs" role="tablist" aria-label="Editar usuario">
           <button type="button" className={tabClassName('dados')} onClick={() => setActiveTab('dados')}>Dados</button>
           <button type="button" className={tabClassName('permissoes')} onClick={() => setActiveTab('permissoes')}>Permissoes</button>
-          <button type="button" className={tabClassName('unidades')} onClick={() => setActiveTab('unidades')}>Unidades</button>
+          {canManageUnits ? <button type="button" className={tabClassName('unidades')} onClick={() => setActiveTab('unidades')}>Unidades</button> : null}
           <button type="button" className={tabClassName('seguranca')} onClick={() => setActiveTab('seguranca')}>Seguranca</button>
         </div>
 
@@ -202,6 +208,24 @@ export function UserEditModal({ user, units, currentUserRole, onClose, onSubmit,
                   <input type="checkbox" checked={formData.must_change_password || false} onChange={(e) => handleChange('must_change_password', e.target.checked)} disabled={loading || resetLoading} />
                   <div><strong>Trocar senha no proximo login</strong><span>Usado tambem no reset de senha abaixo.</span></div>
                 </label>
+                {isSuperAdmin ? (
+                  <label className="setting-toggle setting-toggle-rich">
+                    <div>
+                      <strong>Grupo de permissao</strong>
+                      <span>As regras da aba Grupos serao aplicadas no proximo login do usuario.</span>
+                      <select
+                        value={formData.permission_group_id ?? ''}
+                        onChange={(e) => handleChange('permission_group_id', e.target.value ? Number(e.target.value) : null)}
+                        disabled={loading}
+                      >
+                        <option value="">Usar grupo padrao do perfil</option>
+                        {permissionGroups.map((group) => (
+                          <option key={group.id} value={group.id}>{group.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </label>
+                ) : null}
               </div>
             </div>
           ) : null}

@@ -261,6 +261,16 @@ def get_rules_for_role(db: Session, role: str | None) -> dict[str, dict[str, boo
     return validate_rules(parse_rules(group.rules_json))
 
 
+def get_rules_for_user(db: Session, user) -> dict[str, dict[str, bool]]:
+    ensure_default_permission_groups(db)
+    group_id = getattr(user, 'permission_group_id', None)
+    if group_id:
+        group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
+        if group:
+            return validate_rules(parse_rules(group.rules_json))
+    return get_rules_for_role(db, getattr(user, 'role', None))
+
+
 def unique_slug(db: Session, name: str, group_id: int | None = None) -> str:
     base_slug = slugify_name(name)
     slug = base_slug
