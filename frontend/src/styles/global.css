@@ -926,6 +926,36 @@ button, input { font: inherit; }
   border-color: rgba(255, 90, 0, 0.8);
   box-shadow: 0 0 0 4px rgba(255, 90, 0, 0.10);
 }
+.password-input-wrap {
+  position: relative;
+}
+.password-input-wrap input {
+  padding-right: 48px;
+}
+.auth-form .password-visibility-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #6b6b6b;
+  box-shadow: none;
+}
+.auth-form .password-visibility-toggle:hover {
+  background: rgba(255, 90, 0, 0.10);
+  color: var(--orange);
+}
+.auth-form .password-visibility-toggle:focus-visible {
+  outline: 2px solid rgba(255, 90, 0, 0.45);
+  outline-offset: 2px;
+}
 .auth-form button {
   background: linear-gradient(135deg, #ff5a00, #ff7c37);
   color: white;

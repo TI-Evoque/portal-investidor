@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ForgotPasswordModal } from '../../components/modals/ForgotPasswordModal'
 import { BlockedUserModal } from '../../components/modals/BlockedUserModal'
@@ -14,6 +15,7 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [blockedMessage, setBlockedMessage] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -81,14 +83,25 @@ export function LoginPage() {
 
             <label className="auth-field">
               <span>Senha</span>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Digite sua senha"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
+              <div className="password-input-wrap">
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-visibility-toggle"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </label>
 
             {error ? <div className="error-box">{error}</div> : null}
