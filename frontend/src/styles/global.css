@@ -605,13 +605,15 @@ button, input { font: inherit; }
   border-radius: 20px;
   padding: 16px;
   background: #fffdfb;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .permission-rule-card-header {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
-  margin-bottom: 14px;
 }
 .permission-rule-card-header h3 {
   margin: 0 0 4px;
@@ -644,6 +646,40 @@ button, input { font: inherit; }
   display: grid;
   gap: 8px;
 }
+.permission-rule-sections {
+  display: grid;
+  gap: 12px;
+}
+.permission-rule-section {
+  display: grid;
+  gap: 10px;
+}
+.permission-rule-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.permission-rule-section-title strong {
+  color: #252525;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.permission-rule-section-title span {
+  color: #777;
+  font-size: 12px;
+  font-weight: 800;
+}
+.permission-action-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.permission-visibility-box {
+  padding: 14px;
+  border: 1px solid rgba(24, 128, 66, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(24, 128, 66, 0.08), rgba(255, 255, 255, 0.92));
+}
 .permission-action-toggle {
   display: flex;
   align-items: center;
@@ -654,6 +690,20 @@ button, input { font: inherit; }
   background: #fff;
   color: #333;
   font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+.permission-action-toggle:hover {
+  border-color: rgba(255, 90, 0, 0.32);
+  box-shadow: 0 8px 18px rgba(255, 90, 0, 0.08);
+  transform: translateY(-1px);
+}
+.permission-action-toggle.visibility-toggle {
+  border-color: rgba(24, 128, 66, 0.16);
+}
+.permission-action-toggle.visibility-toggle:hover {
+  border-color: rgba(24, 128, 66, 0.34);
+  box-shadow: 0 8px 18px rgba(24, 128, 66, 0.08);
 }
 .permission-action-toggle input {
   width: 18px;

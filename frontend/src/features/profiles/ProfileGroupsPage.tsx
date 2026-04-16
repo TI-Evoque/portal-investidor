@@ -46,6 +46,13 @@ function cloneRules(rules: PermissionGroup['rules']) {
   return JSON.parse(JSON.stringify(rules || {})) as PermissionGroup['rules']
 }
 
+const isVisibilityRule = (action: PermissionAction) => action.key.startsWith('hide_')
+
+const getVisibilityLabel = (label: string) => {
+  const cleanedLabel = label.replace(/^Ocultar botao\s+/i, '').trim()
+  return `${cleanedLabel} visivel`
+}
+
 function PermissionGroupModal({
   mode,
   group,
@@ -92,6 +99,10 @@ function PermissionGroupModal({
     [activeScreenType, modules]
   )
 
+  const isRuleActive = (moduleKey: string, actionKey: string) => !!form.rules[moduleKey]?.[actionKey]
+
+  const isButtonVisible = (moduleKey: string, actionKey: string) => form.rules[moduleKey]?.[actionKey] !== true
+
   const toggleRule = (moduleKey: string, actionKey: string) => {
     setForm((current) => ({
       ...current,
@@ -106,13 +117,31 @@ function PermissionGroupModal({
     setError('')
   }
 
+  const toggleVisibilityRule = (moduleKey: string, actionKey: string) => {
+    setForm((current) => {
+      const currentVisibility = current.rules[moduleKey]?.[actionKey] !== true
+
+      return {
+        ...current,
+        rules: {
+          ...current.rules,
+          [moduleKey]: {
+            ...(current.rules[moduleKey] || {}),
+            [actionKey]: currentVisibility,
+          },
+        },
+      }
+    })
+    setError('')
+  }
+
   const toggleModule = (module: PermissionModule, enabled: boolean) => {
     setForm((current) => ({
       ...current,
       rules: {
         ...current.rules,
         [module.key]: module.actions.reduce<Record<string, boolean>>((acc, action) => {
-          acc[action.key] = enabled
+          acc[action.key] = isVisibilityRule(action) ? !enabled : enabled
           return acc
         }, {}),
       },
@@ -188,8 +217,12 @@ function PermissionGroupModal({
 
           <div className="permission-rule-grid">
             {visibleModules.map((module) => {
-              const enabledCount = module.actions.filter((action) => form.rules[module.key]?.[action.key]).length
-              const allEnabled = enabledCount === module.actions.length
+              const permissionActions = module.actions.filter((action) => !isVisibilityRule(action))
+              const visibilityActions = module.actions.filter(isVisibilityRule)
+              const enabledCount = permissionActions.filter((action) => isRuleActive(module.key, action.key)).length
+              const visibleButtonCount = visibilityActions.filter((action) => isButtonVisible(module.key, action.key)).length
+              const totalControls = permissionActions.length + visibilityActions.length
+              const allEnabled = totalControls > 0 && enabledCount + visibleButtonCount === totalControls
 
               return (
                 <section className="permission-rule-card" key={module.key}>
@@ -204,17 +237,46 @@ function PermissionGroupModal({
                     </button>
                   </div>
 
-                  <div className="permission-action-list">
-                    {module.actions.map((action) => (
-                      <label className="permission-action-toggle" key={action.key}>
-                        <input
-                          type="checkbox"
-                          checked={!!form.rules[module.key]?.[action.key]}
-                          onChange={() => toggleRule(module.key, action.key)}
-                        />
-                        <span>{action.label}</span>
-                      </label>
-                    ))}
+                  <div className="permission-rule-sections">
+                    <div className="permission-rule-section">
+                      <div className="permission-rule-section-title">
+                        <strong>Permissoes da tela</strong>
+                        <span>{enabledCount} de {permissionActions.length} ativa(s)</span>
+                      </div>
+                      <div className="permission-action-list permission-action-grid">
+                        {permissionActions.map((action) => (
+                          <label className="permission-action-toggle" key={action.key}>
+                            <input
+                              type="checkbox"
+                              checked={isRuleActive(module.key, action.key)}
+                              onChange={() => toggleRule(module.key, action.key)}
+                            />
+                            <span>{action.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {visibilityActions.length ? (
+                      <div className="permission-rule-section permission-visibility-box">
+                        <div className="permission-rule-section-title">
+                          <strong>Botoes visiveis</strong>
+                          <span>{visibleButtonCount} de {visibilityActions.length} visivel(is)</span>
+                        </div>
+                        <div className="permission-action-list permission-action-grid">
+                          {visibilityActions.map((action) => (
+                            <label className="permission-action-toggle visibility-toggle" key={action.key}>
+                              <input
+                                type="checkbox"
+                                checked={isButtonVisible(module.key, action.key)}
+                                onChange={() => toggleVisibilityRule(module.key, action.key)}
+                              />
+                              <span>{getVisibilityLabel(action.label)}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
               )
