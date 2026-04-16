@@ -936,6 +936,7 @@ button, input { font: inherit; }
   position: absolute;
   top: 50%;
   right: 10px;
+  transform: translateY(-50%);
   width: 36px;
   height: 36px;
   display: inline-flex;
@@ -951,6 +952,7 @@ button, input { font: inherit; }
 .auth-form .password-visibility-toggle:hover {
   background: rgba(255, 90, 0, 0.10);
   color: var(--orange);
+  transform: translateY(-50%);
 }
 .auth-form .password-visibility-toggle:focus-visible {
   outline: 2px solid rgba(255, 90, 0, 0.45);
