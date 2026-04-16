@@ -306,7 +306,6 @@ function UnitUsersModal({
 
 export function UnitsPage() {
   const { user } = useAuth()
-  const isSuperAdmin = user?.role === 'super_admin'
   const unitPermissions = user?.permissions?.units
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -398,7 +397,7 @@ export function UnitsPage() {
 
   const canUseUnitAction = (action: string, hideKey?: string) => {
     if (!unitPermissions) return true
-    if (unitPermissions[action] === false) return false
+    if (unitPermissions[action] !== true) return false
     if (hideKey && unitPermissions[hideKey] === true) return false
     return true
   }
@@ -462,7 +461,7 @@ export function UnitsPage() {
               {canUseUnitAction('edit', 'hide_edit_button') ? (
                 <button onClick={() => handleOpenEditModal(unit)} title="Editar" className="icon-square-btn"><PencilLine size={18} /></button>
               ) : null}
-              {isSuperAdmin && canUseUnitAction('delete', 'hide_delete_button') ? (
+              {canUseUnitAction('delete', 'hide_delete_button') ? (
                 <button onClick={() => handleDelete(unit.id)} title="Deletar" className="icon-square-btn"><Trash2 size={18} /></button>
               ) : null}
             </div>

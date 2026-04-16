@@ -65,6 +65,9 @@ def list_online_users(db: Session = Depends(get_db), current_admin: User = Depen
 
 @router.post('/{user_id}/kick-access')
 def kick_user_access(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
+    if not has_user_permission(db, current_admin, 'access_visibility', 'kick_access'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite derrubar acessos')
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
@@ -89,6 +92,9 @@ def send_admin_message(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
+    if not has_user_permission(db, current_admin, 'access_visibility', 'send_message'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite enviar mensagens')
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
@@ -192,6 +198,8 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         raise HTTPException(status_code=403, detail='Seu grupo nao permite gerenciar unidades de usuarios')
 
     if requested_role is not None:
+        if not has_user_permission(db, current_admin, 'users', 'grant_admin'):
+            raise HTTPException(status_code=403, detail='Seu grupo nao permite alterar perfil administrativo')
         _ensure_manageable_role(current_admin, requested_role)
         if not is_super_admin(current_admin):
           raise HTTPException(status_code=403, detail='Apenas o super admin pode alterar o perfil do usuario')
@@ -282,14 +290,15 @@ def reset_user_password(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
-    if not is_super_admin(current_admin):
-        raise HTTPException(status_code=403, detail='Apenas o super admin pode resetar senhas por esta tela')
+    if not has_user_permission(db, current_admin, 'users', 'reset_password'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite resetar senhas')
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
     if user.id == current_admin.id:
         raise HTTPException(status_code=400, detail='Voce nao pode resetar a propria senha por esta tela')
+    _ensure_manageable_user(current_admin, user)
 
     generated_password = INVESTOR_TEMP_PASSWORD if user.role == 'investor' else generate_temporary_password(6)
     user.password_hash = get_password_hash(generated_password)
@@ -323,14 +332,15 @@ def reset_user_password(
 
 @router.delete('/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db), current_admin: User = Depends(require_admin)):
-    if not is_super_admin(current_admin):
-        raise HTTPException(status_code=403, detail='Apenas o super admin pode excluir usuarios')
+    if not has_user_permission(db, current_admin, 'users', 'delete'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite excluir usuarios')
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Usuario nao encontrado')
     if user.id == current_admin.id:
         raise HTTPException(status_code=400, detail='Voce nao pode excluir o proprio usuario')
+    _ensure_manageable_user(current_admin, user)
     try:
         db.delete(user)
         db.commit()

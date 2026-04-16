@@ -73,8 +73,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!localStorage.getItem('portal_token')) return
     if (document.visibilityState === 'hidden') return
     try {
-      const { data } = await api.post<{ ok: boolean; admin_message?: string | null }>('/auth/heartbeat')
+      const { data } = await api.post<{
+        ok: boolean
+        admin_message?: string | null
+        permission_group_id?: number | null
+        permissions?: Record<string, Record<string, boolean>>
+      }>('/auth/heartbeat')
       setAdminNotice(data.admin_message || '')
+      if (data.permissions) {
+        setUser((current) => {
+          if (!current) return current
+          const updatedUser = {
+            ...current,
+            permission_group_id: data.permission_group_id ?? current.permission_group_id,
+            permissions: data.permissions,
+          }
+          localStorage.setItem('portal_user', JSON.stringify(updatedUser))
+          return updatedUser
+        })
+      }
     } catch {
       // O interceptor global ja trata 401 e limpeza de sessao.
     }

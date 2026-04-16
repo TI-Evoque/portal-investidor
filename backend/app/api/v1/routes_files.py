@@ -9,6 +9,7 @@ from app.models.unit import Unit
 from app.models.user_unit import UserUnit
 from app.schemas.file import FileOut, FileUpdateIn
 from app.services.file_service import create_file_record, read_pdf_bytes
+from app.services.permission_group_service import has_user_permission
 
 router = APIRouter(prefix='/files', tags=['files'])
 
@@ -44,6 +45,8 @@ def upload_file(
     db: Session = Depends(get_db),
     current_user=Depends(require_admin),
 ):
+    if not has_user_permission(db, current_user, 'files', 'create'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite enviar arquivos')
     filename, file_bytes = read_pdf_bytes(upload)
     ids = [int(item) for item in unit_ids.split(',') if item.strip().isdigit()]
     record = create_file_record(
@@ -80,7 +83,9 @@ def download_file(file_id: int, db: Session = Depends(get_db), current_user=Depe
 
 
 @router.delete('/{file_id}')
-def delete_file(file_id: int, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def delete_file(file_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    if not has_user_permission(db, current_user, 'files', 'delete'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite excluir arquivos')
     record = db.query(File).filter(File.id == file_id).first()
     if not record:
         raise HTTPException(status_code=404, detail='Arquivo nao encontrado')
@@ -94,8 +99,10 @@ def update_file(
     file_id: int,
     payload: FileUpdateIn,
     db: Session = Depends(get_db),
-    _: object = Depends(require_admin),
+    current_user=Depends(require_admin),
 ):
+    if not has_user_permission(db, current_user, 'files', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar arquivos')
     record = db.query(File).filter(File.id == file_id).first()
     if not record:
         raise HTTPException(status_code=404, detail='Arquivo nao encontrado')

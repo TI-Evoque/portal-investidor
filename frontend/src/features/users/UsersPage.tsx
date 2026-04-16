@@ -187,7 +187,7 @@ export function UsersPage() {
 
   const canUseUserAction = (action: string, hideKey?: string) => {
     if (!userPermissions) return true
-    if (userPermissions[action] === false) return false
+    if (userPermissions[action] !== true) return false
     if (hideKey && userPermissions[hideKey] === true) return false
     return true
   }
@@ -342,7 +342,7 @@ export function UsersPage() {
                     className="action-chip icon-action-chip"
                   ><KeyRound size={15} /> Resetar senha</button>
                 ) : null}
-                {isSuperAdmin && canUseUserAction('delete', 'hide_delete_button') ? (
+                {(currentUser?.role === 'admin' || isSuperAdmin) && user.id !== currentUser?.id && canUseUserAction('delete', 'hide_delete_button') ? (
                   <button
                     onClick={() =>
                       openActionConfirmation({

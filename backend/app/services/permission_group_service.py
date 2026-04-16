@@ -134,13 +134,24 @@ PERMISSION_CATALOG = [
     },
 ]
 
+
+def build_full_access_rules() -> dict[str, dict[str, bool]]:
+    return {
+        module['key']: {
+            action['key']: False if action['key'].startswith('hide_') else True
+            for action in module['actions']
+        }
+        for module in PERMISSION_CATALOG
+    }
+
+
 DEFAULT_GROUPS = [
     {
         'slug': 'super_admin',
         'name': 'Super admin',
         'description': 'Controle total do sistema.',
         'is_system': True,
-        'rules': {module['key']: {action['key']: True for action in module['actions']} for module in PERMISSION_CATALOG},
+        'rules': build_full_access_rules(),
     },
     {
         'slug': 'admin',
@@ -234,6 +245,8 @@ def ensure_default_permission_groups(db: Session) -> None:
                 merged_rules.setdefault(module_key, {})
                 for action_key, value in actions.items():
                     merged_rules[module_key].setdefault(action_key, value)
+                    if default_group['slug'] == 'super_admin' and action_key.startswith('hide_'):
+                        merged_rules[module_key][action_key] = False
             if merged_rules != current_rules:
                 group.rules_json = serialize_rules(merged_rules)
                 changed = True
@@ -272,8 +285,6 @@ def get_rules_for_user(db: Session, user) -> dict[str, dict[str, bool]]:
 
 
 def has_user_permission(db: Session, user, module_key: str, action_key: str) -> bool:
-    if getattr(user, 'role', None) == 'super_admin':
-        return True
     rules = get_rules_for_user(db, user)
     return rules.get(module_key, {}).get(action_key) is True
 

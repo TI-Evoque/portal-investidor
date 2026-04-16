@@ -19,6 +19,7 @@ type PendingAccessAction = {
 export function AccessVisibilityPage() {
   const { user: currentUser } = useAuth()
   const isSuperAdmin = currentUser?.role === 'super_admin'
+  const accessPermissions = currentUser?.permissions?.access_visibility
   const [users, setUsers] = useState<User[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -95,6 +96,13 @@ export function AccessVisibilityPage() {
         ? refreshedUsers.data.items
         : []
     setUsers(payload)
+  }
+
+  const canUseAccessAction = (action: string, hideKey?: string) => {
+    if (!accessPermissions) return true
+    if (accessPermissions[action] !== true) return false
+    if (hideKey && accessPermissions[hideKey] === true) return false
+    return true
   }
 
   const confirmPendingAction = async () => {
@@ -191,7 +199,12 @@ export function AccessVisibilityPage() {
                     </div>
 
                     <div className="user-visibility-actions">
-                      {!isCurrentSession ? (
+                      {isCurrentSession ? (
+                        <button type="button" className="action-chip icon-action-chip" disabled>
+                          <UserX size={15} />
+                          Sessao atual
+                        </button>
+                      ) : canUseAccessAction('kick_access', 'hide_kick_access_button') ? (
                         <button
                           type="button"
                           className="action-chip danger icon-action-chip"
@@ -219,14 +232,9 @@ export function AccessVisibilityPage() {
                           <UserX size={15} />
                           {user.is_active ? 'Derrubar acesso' : 'Reativar'}
                         </button>
-                      ) : (
-                        <button type="button" className="action-chip icon-action-chip" disabled>
-                          <UserX size={15} />
-                          Sessao atual
-                        </button>
-                      )}
+                      ) : null}
 
-                      {!isCurrentSession ? (
+                      {!isCurrentSession && canUseAccessAction('send_message', 'hide_send_message_button') ? (
                         <button
                           type="button"
                           className="action-chip icon-action-chip"

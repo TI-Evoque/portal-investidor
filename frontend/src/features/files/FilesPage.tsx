@@ -272,7 +272,7 @@ export function FilesPage() {
 
   const canUseFileAction = (action: string, hideKey?: string) => {
     if (!filePermissions) return true
-    if (filePermissions[action] === false) return false
+    if (filePermissions[action] !== true) return false
     if (hideKey && filePermissions[hideKey] === true) return false
     return true
   }

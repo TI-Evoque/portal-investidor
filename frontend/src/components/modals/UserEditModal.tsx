@@ -18,9 +18,9 @@ interface UserEditModalProps {
 }
 
 export function UserEditModal({ user, units, permissionGroups = [], currentUserPermissions, currentUserRole, onClose, onSubmit, onResetPassword }: UserEditModalProps) {
-  const canEditUser = currentUserPermissions?.edit !== false
-  const canManageUnits = currentUserPermissions?.assign_units !== false
-  const canResetPassword = currentUserPermissions?.reset_password !== false
+  const canEditUser = !currentUserPermissions || currentUserPermissions.edit === true
+  const canManageUnits = !currentUserPermissions || currentUserPermissions.assign_units === true
+  const canResetPassword = !currentUserPermissions || currentUserPermissions.reset_password === true
   const [activeTab, setActiveTab] = useState<EditTab>(() => (!canEditUser && canManageUnits ? 'unidades' : 'dados'))
   const [formData, setFormData] = useState<Partial<User>>({
     email: user.email,

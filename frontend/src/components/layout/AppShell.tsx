@@ -40,16 +40,15 @@ export function AppShell() {
   }
 
   const canViewPath = (path: string) => {
-    if (user?.role === 'super_admin') return true
     const moduleKey = moduleByPath[path]
     if (!moduleKey) return true
     if (!user?.permissions) return true
-    return user.permissions[moduleKey]?.view !== false
+    return user.permissions[moduleKey]?.view === true
   }
 
   const items =
     isSuperAdmin
-      ? [...adminItems, ...superAdminItems]
+      ? [...adminItems, ...superAdminItems].filter(([to]) => canViewPath(to))
       : user?.role === 'admin'
         ? adminItems.filter(([to]) => canViewPath(to))
         : investorItems.filter(([to]) => canViewPath(to))

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File as FastFile, Form, HTTPException, U
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import is_staff, is_super_admin, require_admin, require_authorized_user
+from app.api.deps.auth import is_staff, require_admin, require_authorized_user
 from app.db.session import get_db
 from app.models.file import File, FileUnit
 from app.models.unit import Unit
@@ -15,6 +15,7 @@ from app.schemas.file import FileOut
 from app.schemas.unit import UnitCreate, UnitOut, UnitUpdate
 from app.schemas.user import UserOut
 from app.services.file_service import create_file_record, read_pdf_bytes
+from app.services.permission_group_service import has_user_permission
 from app.services.user_service import get_unit_ids_map, serialize_user
 
 router = APIRouter(prefix='/units', tags=['units'])
@@ -93,7 +94,9 @@ def list_units(db: Session = Depends(get_db), current_user: User = Depends(requi
 
 
 @router.post('', response_model=UnitOut)
-def create_unit(payload: UnitCreate, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def create_unit(payload: UnitCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    if not has_user_permission(db, current_user, 'units', 'create'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite criar unidades')
     exists = db.query(Unit).filter(Unit.nome == payload.nome).first()
     if exists:
         raise HTTPException(status_code=409, detail='Unidade ja cadastrada')
@@ -106,7 +109,9 @@ def create_unit(payload: UnitCreate, db: Session = Depends(get_db), _: object = 
 
 
 @router.patch('/{unit_id}', response_model=UnitOut)
-def update_unit(unit_id: int, payload: UnitUpdate, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def update_unit(unit_id: int, payload: UnitUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    if not has_user_permission(db, current_user, 'units', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar unidades')
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
@@ -121,8 +126,10 @@ async def upload_unit_photo(
     unit_id: int,
     foto: UploadFile = FastFile(...),
     db: Session = Depends(get_db),
-    _: object = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ):
+    if not has_user_permission(db, current_user, 'units', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar unidades')
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
@@ -151,7 +158,9 @@ def get_unit_photo(unit_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete('/{unit_id}/photo', response_model=UnitOut)
-def delete_unit_photo(unit_id: int, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def delete_unit_photo(unit_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    if not has_user_permission(db, current_user, 'units', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar unidades')
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
@@ -167,15 +176,17 @@ def delete_unit(unit_id: int, db: Session = Depends(get_db), current_admin: User
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
-    if not is_super_admin(current_admin):
-        raise HTTPException(status_code=403, detail='Apenas o super admin pode excluir unidades')
+    if not has_user_permission(db, current_admin, 'units', 'delete'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite excluir unidades')
     db.delete(unit)
     db.commit()
     return {'message': 'Unidade removida com sucesso'}
 
 
 @router.get('/{unit_id}/users', response_model=list[UserOut])
-def list_unit_users(unit_id: int, db: Session = Depends(get_db), _: object = Depends(require_admin)):
+def list_unit_users(unit_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    if not has_user_permission(db, current_user, 'units', 'view'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite visualizar unidades')
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')
@@ -230,6 +241,8 @@ def upload_unit_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    if not has_user_permission(db, current_user, 'files', 'create'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite enviar arquivos')
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
     if not unit:
         raise HTTPException(status_code=404, detail='Unidade nao encontrada')

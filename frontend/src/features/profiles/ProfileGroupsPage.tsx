@@ -3,6 +3,7 @@ import { Edit3, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 
 import { ConfirmActionModal } from '../../components/modals/ConfirmActionModal'
 import { SectionHeader } from '../../components/ui/SectionHeader'
+import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
 
 type PermissionAction = {
@@ -296,6 +297,8 @@ function PermissionGroupModal({
 }
 
 export function ProfileGroupsPage() {
+  const { checkAuth, user } = useAuth()
+  const profilePermissions = user?.permissions?.profiles
   const [groups, setGroups] = useState<PermissionGroup[]>([])
   const [modules, setModules] = useState<PermissionModule[]>([])
   const [editingGroup, setEditingGroup] = useState<PermissionGroup | null>(null)
@@ -349,6 +352,7 @@ export function ProfileGroupsPage() {
       setIsCreating(false)
       setEditingGroup(null)
       await loadData()
+      await checkAuth()
     } finally {
       setSaving(false)
     }
@@ -366,15 +370,24 @@ export function ProfileGroupsPage() {
     }
   }
 
+  const canUseProfileAction = (action: string, hideKey?: string) => {
+    if (!profilePermissions) return true
+    if (profilePermissions[action] !== true) return false
+    if (hideKey && profilePermissions[hideKey] === true) return false
+    return true
+  }
+
   return (
     <div className="users-page-wrap profile-groups-page">
       <SectionHeader
         title="Perfis e permissoes"
         action={
+          canUseProfileAction('create', 'hide_create_button') ? (
           <button type="button" className="outline-soft" onClick={() => setIsCreating(true)}>
             <Plus size={18} />
             Novo grupo
           </button>
+          ) : null
         }
       />
 
@@ -414,10 +427,13 @@ export function ProfileGroupsPage() {
                 <span className="pill-status mute">{enabledRules} regra(s)</span>
               </div>
               <div className="profile-group-actions">
+                {canUseProfileAction('edit', 'hide_edit_button') ? (
                 <button type="button" className="action-chip primary icon-action-chip" onClick={() => setEditingGroup(group)}>
                   <Edit3 size={15} />
                   Editar
                 </button>
+                ) : null}
+                {canUseProfileAction('delete', 'hide_delete_button') ? (
                 <button
                   type="button"
                   className="action-chip danger icon-action-chip"
@@ -428,6 +444,7 @@ export function ProfileGroupsPage() {
                   <Trash2 size={15} />
                   Deletar
                 </button>
+                ) : null}
               </div>
             </article>
           )

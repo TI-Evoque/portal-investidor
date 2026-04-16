@@ -54,7 +54,12 @@ def me(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
 @router.post('/heartbeat')
 def heartbeat(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     _touch_last_seen(db, current_user)
-    return {'ok': True, 'admin_message': current_user.admin_message}
+    return {
+        'ok': True,
+        'admin_message': current_user.admin_message,
+        'permission_group_id': current_user.permission_group_id,
+        'permissions': get_rules_for_user(db, current_user),
+    }
 
 
 @router.post('/acknowledge-message')

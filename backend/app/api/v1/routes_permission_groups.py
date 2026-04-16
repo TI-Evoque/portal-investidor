@@ -9,6 +9,7 @@ from app.schemas.permission_group import PermissionCatalogOut, PermissionGroupCr
 from app.services.permission_group_service import (
     PERMISSION_CATALOG,
     ensure_default_permission_groups,
+    has_user_permission,
     serialize_group,
     serialize_rules,
     unique_slug,
@@ -33,8 +34,10 @@ def list_permission_groups(db: Session = Depends(get_db), _: object = Depends(re
 def create_permission_group(
     payload: PermissionGroupCreate,
     db: Session = Depends(get_db),
-    _: object = Depends(require_super_admin),
+    current_user=Depends(require_super_admin),
 ):
+    if not has_user_permission(db, current_user, 'profiles', 'create'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite criar grupos')
     ensure_default_permission_groups(db)
     group = PermissionGroup(
         name=payload.name.strip(),
@@ -60,8 +63,10 @@ def update_permission_group(
     group_id: int,
     payload: PermissionGroupUpdate,
     db: Session = Depends(get_db),
-    _: object = Depends(require_super_admin),
+    current_user=Depends(require_super_admin),
 ):
+    if not has_user_permission(db, current_user, 'profiles', 'edit'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite editar grupos')
     ensure_default_permission_groups(db)
     group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
     if not group:
@@ -91,8 +96,10 @@ def update_permission_group(
 def delete_permission_group(
     group_id: int,
     db: Session = Depends(get_db),
-    _: object = Depends(require_super_admin),
+    current_user=Depends(require_super_admin),
 ):
+    if not has_user_permission(db, current_user, 'profiles', 'delete'):
+        raise HTTPException(status_code=403, detail='Seu grupo nao permite deletar grupos')
     group = db.query(PermissionGroup).filter(PermissionGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail='Grupo de permissao nao encontrado')
